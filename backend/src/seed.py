@@ -5,6 +5,7 @@ import random
 
 from faker import Faker
 
+from src.core.security import hash_password
 from src.db.database import SessionLocal
 from src.db.models import (
     Account,
@@ -23,6 +24,10 @@ BENEFICIARY_COUNT = 10
 CASHIER_COUNT = 4
 ORDER_COUNT = 20
 REPORT_COUNT = 8
+
+DEMO_PASSWORD = "password123"
+ADMIN_EMAIL = "admin@smartcaisse.com"
+CASHIER_EMAIL = "cashier@smartcaisse.com"
 
 fake = Faker()
 
@@ -60,8 +65,10 @@ async def seed() -> None:
             session.add(
                 Account(
                     beneficiary_id=beneficiary.id,
-                    email=fake.unique.email(),
-                    password_hash=fake.sha256(),
+                    email=ADMIN_EMAIL
+                    if len(beneficiaries) == 1
+                    else fake.unique.email(),
+                    password_hash=hash_password(DEMO_PASSWORD),
                     role=AccountType.ADMIN,
                     is_active=True,
                 )
@@ -80,8 +87,8 @@ async def seed() -> None:
 
             account = Account(
                 cashier_id=cashier.id,
-                email=fake.unique.email(),
-                password_hash=fake.sha256(),
+                email=CASHIER_EMAIL if not cashier_accounts else fake.unique.email(),
+                password_hash=hash_password(DEMO_PASSWORD),
                 role=AccountType.CASHIER,
                 is_active=True,
             )
@@ -128,6 +135,7 @@ async def seed() -> None:
         f"{ORDER_COUNT} purchase orders, {ORDER_COUNT} transactions, "
         f"{REPORT_COUNT} reports."
     )
+    print(f"Demo logins: {ADMIN_EMAIL} / {CASHIER_EMAIL} (password: {DEMO_PASSWORD})")
 
 
 if __name__ == "__main__":

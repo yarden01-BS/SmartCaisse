@@ -135,6 +135,19 @@ class Account(Base):
     )
 
 
+class RevokedToken(Base):
+    """Refresh token ids that were revoked by logout or rotation."""
+
+    __tablename__ = "revoked_tokens"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    jti: Mapped[str] = mapped_column(unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class PurchaseOrder(Base):
     __tablename__ = "purchase_orders"
 
