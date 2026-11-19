@@ -1,0 +1,22 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.20.1",
+    "asyncpg>=0.32.0",
+    "dotenv>=0.9.9",
+    "fastapi[standard]>=0.163.1",
+    "pgvector>=0.5.1",
+    "psycopg2>=2.9.13",
+    "sqlalchemy[asyncio]>=2.1.9",
+]
+
+[dependency-groups]
+dev = [
+    "faker>=40.54.0",
+    "pyrefly>=1.4.1",
+    "ruff>=0.17.5",
+]

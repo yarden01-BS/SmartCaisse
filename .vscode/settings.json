@@ -1,0 +1,24 @@
+{
+    "pgsql.connections": [
+        {
+            "id": "165E7B6E-A999-4AB8-BAAE-C98554EB310B",
+            "groupId": "CAA80366-5583-412B-88CF-5B9F6B70F370",
+            "authenticationType": "SqlLogin",
+            "connectTimeout": 15,
+            "applicationName": "vscode-pgsql",
+            "clientEncoding": "utf8",
+            "sslmode": "prefer",
+            "savePassword": true,
+            "sslRootCertMode": "none",
+            "profileName": "undefined, <default> (undefined)",
+            "server": "localhost",
+            "user": "postgres",
+            "password": "",
+            "database": "postgres",
+            "port": "5432",
+            "sshPassword": "",
+            "profileOrigin": "parameters",
+            "expiresOn": 0
+        }
+    ]
+}
