@@ -41,9 +41,9 @@ export default function AdminPage() {
   // 'comptes-liste' | 'comptes-creer' | 'comptes-modifier' | 'travailleurs' | 'travailleurs-modifier'
   const [sousPage, setSousPage] = useState('comptes-liste');
 
-  // =================================================================
+  
   // 1. COMPTES UTILISATEURS (SANS DONNÉES FICTIVES)
-  // =================================================================
+  
   const [comptes, setComptes] = useState([]);
 
   const [filtreStatut, setFiltreStatut] = useState('actif');
@@ -59,9 +59,9 @@ export default function AdminPage() {
   // Formulaire Modification de compte
   const [editCompte, setEditCompte] = useState(null);
 
-  // =================================================================
+  
   // 2. TRAVAILLEURS & STAGIAIRES (SANS DONNÉES FICTIVES)
-  // =================================================================
+  
   const [travailleurs, setTravailleurs] = useState([]);
 
   // Ajout Travailleur
@@ -115,7 +115,7 @@ export default function AdminPage() {
     }
   };
 
-  // --- Création de compte (avec e-mail) ---
+  //  Création de compte (avec e-mail) 
   const handleCreerCompte = (e) => {
     e.preventDefault();
     if (!createNom.trim() || !createEmail.trim() || !createPwd.trim()) {
@@ -164,7 +164,7 @@ export default function AdminPage() {
     setSousPage('comptes-liste');
   };
 
-  // --- Modification de compte ---
+  //  Modification de compte
   const ouvrirModificationCompte = (compte) => {
     setMenuOuvertId(null);
     setEditCompte({ ...compte, nouveauPwd: '' });
@@ -204,7 +204,7 @@ export default function AdminPage() {
     );
   };
 
-  // --- Suppression de compte ---
+  //  Suppression de compte 
   const handleSupprimerCompte = (compte) => {
     setMenuOuvertId(null);
     if (compte.protege) {
@@ -258,7 +258,7 @@ export default function AdminPage() {
     }
   };
 
-  // --- Ajouter un travailleur ---
+  // Ajouter un travailleur 
   const handleAjouterTravailleur = (e) => {
     e.preventDefault();
     if (!travNom.trim() || !travPrenom.trim()) {
@@ -299,7 +299,7 @@ export default function AdminPage() {
     );
   };
 
-  // --- Modifier un travailleur ---
+  // Modifier un travailleur 
   const ouvrirModificationTravailleur = (trav) => {
     setMenuTravOuvertId(null);
     setEditTravailleur({ ...trav });
@@ -335,7 +335,7 @@ export default function AdminPage() {
     );
   };
 
-  // --- Supprimer un travailleur ---
+  // Supprimer un travailleur
   const handleSupprimerTravailleur = (trav) => {
     setMenuTravOuvertId(null);
     setTravailleurs((prev) => prev.filter((t) => t.id !== trav.id));
@@ -346,9 +346,9 @@ export default function AdminPage() {
     );
   };
 
-  // =================================================================
+  
   // ÉCRAN DE CONNEXION
-  // =================================================================
+  
   if (!adminUser) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col">
@@ -493,9 +493,9 @@ export default function AdminPage() {
 
         {/* Contenu principal */}
         <main className="flex-1 p-6 overflow-y-auto">
-          {/* =========================================================
+          {/* 
           1. AFFICHAGE DES COMPTES UTILISATEURS
-          ========================================================= */}
+           */}
           {sousPage === 'comptes-liste' && (
             <div className="space-y-6 max-w-5xl mx-auto">
               <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-wrap justify-between items-center gap-4">
@@ -644,9 +644,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* =========================================================
+          {/* 
           2. CRÉATION DE COMPTE (AVEC E-MAIL)
-          ========================================================= */}
+           */}
           {sousPage === 'comptes-creer' && (
             <div className="max-w-lg mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl">
               <h2 className="text-xl font-bold mb-1">Création d'un Compte</h2>
@@ -731,9 +731,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* =========================================================
+          {/* 
           3. MODIFICATION D'UN COMPTE EXISTANT
-          ========================================================= */}
+           */}
           {sousPage === 'comptes-modifier' && editCompte && (
             <div className="max-w-lg mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl">
               <h2 className="text-xl font-bold mb-1">Modifier le Compte</h2>
@@ -818,9 +818,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* =========================================================
+          {/* 
           4. GESTION DES TRAVAILLEURS + EXPORT PDF
-          ========================================================= */}
+           */}
           {sousPage === 'travailleurs' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
               {/* Formulaire d'ajout + Extraction des traits faciaux */}
@@ -1003,9 +1003,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* =========================================================
+          {/* 
           5. MODIFICATION D'UN TRAVAILLEUR EXISTANT
-          ========================================================= */}
+         */}
           {sousPage === 'travailleurs-modifier' && editTravailleur && (
             <div className="max-w-lg mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl">
               <h2 className="text-xl font-bold mb-1">Modifier le Travailleur</h2>
