@@ -1,4 +1,4 @@
-"""Business logic for the authenticated user's profile."""
+"""Logique métier pour le profil de l'utilisateur authentifié."""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +8,7 @@ from .users_schemas import BeneficiaryProfile, CashierProfile, UserProfileRespon
 
 
 class AccountNotFoundError(Exception):
-    """Raised when the token points at an account that is gone or inactive."""
+    """Levée lorsque le jeton pointe vers un compte supprimé ou inactif."""
 
 
 def _to_response(account: Account) -> UserProfileResponse:
@@ -28,7 +28,7 @@ def _to_response(account: Account) -> UserProfileResponse:
 
 
 async def get_profile(session: AsyncSession, account_id: int) -> UserProfileResponse:
-    """Return the profile belonging to the given authenticated account."""
+    """Renvoie le profil appartenant au compte authentifié donné."""
     account = await UserRepository(session).get_with_profile(account_id)
 
     if account is None or not account.is_active:

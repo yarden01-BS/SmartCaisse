@@ -6,15 +6,15 @@ BASE_DIR = pathlib.Path(__file__).resolve().parents[3]
 
 
 class Settings(BaseSettings):
-    # Synchronous URL used by Alembic.
+    # URL synchrone utilisée par Alembic.
     DATABASE_URL: str
-    # Asynchronous URL used by the application and the seed script.
+    # URL asynchrone utilisée par l'application et le script d'amorçage.
     ASYNC_DATABASE_URL: str
     SECRET_KEY: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     REFRESH_TOKEN_EXPIRE_MINUTES: int
-    # Enable in production (HTTPS only); disabled for local development.
+    # À activer en production (HTTPS uniquement) ; désactivé pour le développement local.
     COOKIE_SECURE: bool
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 

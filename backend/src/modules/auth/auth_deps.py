@@ -1,4 +1,4 @@
-"""Shared FastAPI dependencies for authenticated routes."""
+"""Dépendances FastAPI partagées pour les routes authentifiées."""
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -19,7 +19,7 @@ async def get_current_account(
         bearer_scheme
     ),
 ) -> dict[str, str]:
-    """Validate the bearer access token and return its claims."""
+    """Valide le jeton d'accès bearer et renvoie ses revendications."""
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -50,7 +50,7 @@ async def get_current_account(
 async def get_current_account_id(
     current: dict[str, str] = Depends(get_current_account),  # noqa: B008
 ) -> int:
-    """Return the authenticated account id as an integer."""
+    """Renvoie l'identifiant du compte authentifié sous forme d'entier."""
     try:
         return int(current["account_id"])
     except (KeyError, TypeError, ValueError) as exc:
@@ -64,7 +64,7 @@ async def get_current_account_id(
 async def require_admin(
     current: dict[str, str] = Depends(get_current_account),  # noqa: B008
 ) -> dict[str, str]:
-    """Require an authenticated account with the admin role."""
+    """Exige un compte authentifié avec le rôle administrateur."""
     if current.get("role") != AccountType.ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -76,7 +76,7 @@ async def require_admin(
 async def require_cashier(
     current: dict[str, str] = Depends(get_current_account),  # noqa: B008
 ) -> dict[str, str]:
-    """Require an authenticated account with the cashier role."""
+    """Exige un compte authentifié avec le rôle caissier."""
     if current.get("role") != AccountType.CASHIER.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

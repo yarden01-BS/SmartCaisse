@@ -1,4 +1,4 @@
-"""HTTP routes for authentication."""
+"""Routes HTTP pour l'authentification."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,7 +32,7 @@ async def login(
     response: Response,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> LoginResponse:
-    """Authenticate an admin or cashier account and set the refresh-token cookie."""
+    """Authentifie un compte administrateur ou caissier et définit le cookie du jeton d'actualisation."""
     try:
         access_token, refresh_token, result = await auth_service.authenticate(
             session, credentials
@@ -54,7 +54,7 @@ async def refresh(
     response: Response,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> LoginResponse:
-    """Rotate the refresh cookie and return a fresh access token."""
+    """Fait tourner le cookie d'actualisation et renvoie un nouveau jeton d'accès."""
     token = request.cookies.get(REFRESH_TOKEN_COOKIE)
     try:
         access_token, refresh_token, result = await auth_service.refresh(session, token)
@@ -75,7 +75,7 @@ async def logout(
     response: Response,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> dict[str, str]:
-    """Revoke the refresh cookie and clear it from the browser."""
+    """Révoque le cookie d'actualisation et le supprime du navigateur."""
     await auth_service.revoke(session, request.cookies.get(REFRESH_TOKEN_COOKIE))
     response.delete_cookie(
         key=REFRESH_TOKEN_COOKIE,

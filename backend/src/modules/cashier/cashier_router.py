@@ -1,4 +1,4 @@
-"""HTTP routes for the cashier purchase-order and transaction workflow."""
+"""Routes HTTP pour le flux des bons de commande et des transactions du caissier."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +30,7 @@ async def create_purchase_order(
     cashier_id: int = Depends(get_current_account_id),
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> PurchaseOrderResponse:
-    """Register a purchase order received from a beneficiary."""
+    """Enregistre un bon de commande reçu d'un bénéficiaire."""
     try:
         return await cashier_service.create_order(session, cashier_id, data)
     except cashier_service.BeneficiaryNotFoundError as exc:
@@ -49,7 +49,7 @@ async def perform_transaction(
     cashier_id: int = Depends(get_current_account_id),
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> TransactionResponse:
-    """Pay an order and record the company/client subsidy split."""
+    """Paie une commande et enregistre la répartition de la subvention entreprise/client."""
     try:
         return await cashier_service.perform_transaction(session, cashier_id, order_id)
     except cashier_service.PurchaseOrderNotFoundError as exc:
@@ -67,5 +67,5 @@ async def get_report(
     cashier_id: int = Depends(get_current_account_id),
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> CashierReport:
-    """Return totals received, client-paid, and company-subsidized amounts."""
+    """Renvoie les totaux perçus, payés par le client et pris en charge par l'entreprise."""
     return await cashier_service.get_report(session, cashier_id)

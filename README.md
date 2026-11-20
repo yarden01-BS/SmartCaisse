@@ -1,153 +1,47 @@
 # SmartCaisse
 
-A management application to handle employee subsidies in the company cafeteria
+Application de gestion des subventions accordées aux employés dans la cantine de l'entreprise.
 
-## Overview
+## Présentation
 
-We're building an application for handle employee subside
+SmartCaisse permet de gérer les bénéficiaires, de calculer la part prise en charge par l'entreprise et d'enregistrer les transactions de subvention. Le backend expose une API FastAPI sécurisée ; le frontend React sera ajouté au fur et à mesure du développement.
 
-## Goals
+## Objectifs
 
-- Managing beneficiary account
-- Calculating company share in employees'subside
-- Securing secure monetary transactions with faceID
+- Gérer les comptes des bénéficiaires (employés).
+- Calculer la part de l'entreprise dans la subvention des employés.
+- Sécuriser les transactions monétaires (authentification par jetons, puis FaceID).
 
-## Tech Stack
+## Stack technique
 
-**Frontend**
+- **Backend** : Python, FastAPI, SQLAlchemy, PostgreSQL, Docker, `uv`.
+- **Frontend (prévu)** : React, JavaScript, Tailwind CSS.
 
-- React
-- Javascript
-- Tailwind CSS
+## Organisation du dépôt
 
-**Backend**
+| Dossier / fichier | Rôle |
+|---|---|
+| `backend/` | API FastAPI, modèles, migrations, tests et documentation détaillée. Voir [backend/README.md](./backend/README.md). |
+| `.env.example` | Modèle de configuration à copier vers `.env` à la racine. |
+| `compose.yaml` | Service PostgreSQL utilisé en développement. |
+| `AGENTS.md` | Règles de travail du dépôt. |
+| `backend/AGENTS.md` | Règles spécifiques au backend. |
 
-- Python
-- FastAPI
-- SQLAlchemy
-- PostgreSQL
+> Le frontend React n'est pas encore présent dans le dépôt : aucun README dédié n'existe pour l'instant.
 
-**Infrastructure**
+## Installation et démarrage
 
-- Docker
-- Docker Compose
-
-## Project Structure
-
-```text
-SmartCaisse/
-├── backend/
-│   ├── migrations/
-│   └── src/
-│       ├── core/
-│       ├── db/
-│       ├── modules/
-│       │   ├── admin/
-│       │   ├── auth/
-│       │   ├── beneficiary/
-│       │   ├── cashier/
-│       │   └── users/
-│       ├── main.py
-│       └── tests/
-├── frontend/
-├── docker-compose.yml
-└── README.md
-```
-
-The `auth` module handles login, refresh-token rotation, and JWT validation. The `users` module exposes `GET /me`, which returns the profile of the account identified by the access token. The `beneficiary` module is admin-only, and the `cashier` module handles purchase orders, subsidy transactions, and accounting reports. See the [Backend Documentation](./backend/README.md) for details.
-
-## Prerequisites
-
-- Node.js
-- pnpm
-- Python
-- Docker
-- Git
-
-## Getting Started
-
-### 1. Clone the repository
-
-```bash
-git clone <repository-url>
-cd <project-name>
-```
-
-### 2. Configure environment variables
-
-Create the required `.env` files.
-
-See the backend and frontend README files for configuration details.
-
-### 3. Start the database
-
-```bash
-docker compose up -d
-```
-
-### 4. Start the backend
-
-See [Backend Documentation](./backend/README.md).
-
-### 5. Start the frontend
-
-See [Frontend Documentation](./frontend/README.md).
-
-## API quick test
-
-Start the database and backend, then log in with a seeded dev account:
-
-```bash
-curl -c cookies.txt -X POST http://localhost:8000/auth/login ^
-  -H "Content-Type: application/json" ^
-  -d "{\"email\":\"admin@smartcaisse.com\",\"password\":\"password123\"}"
-```
-
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiJ9...",
-  "token_type": "bearer",
-  "account_id": 15,
-  "role": "admin"
-}
-```
-
-The access token is in the JSON body and is sent as a bearer token. The long-lived refresh token is only in the `HttpOnly` `refresh_token` cookie saved in `cookies.txt`.
-
-```bash
-curl -H "Authorization: Bearer <access_token>" http://localhost:8000/me
-```
-
-```json
-{
-  "account_id": 15,
-  "email": "admin@smartcaisse.com",
-  "role": "admin",
-  "is_active": true,
-  "profile": {
-    "id": 16,
-    "first_name": "Jane",
-    "last_name": "Doe",
-    "profession": "Teacher",
-    "situation": "permanent",
-    "is_active": true
-  }
-}
-```
-
-Rotate the refresh token with `POST /auth/refresh` (cookie sent automatically); revoke it with `POST /auth/logout`. Reusing a rotated or revoked refresh token returns `401`.
-
-See the [Backend Documentation](./backend/README.md) for all endpoints and configuration.
+Les procédures complètes (configuration `.env`, création de `.venv` avec `uv sync`, PostgreSQL via Docker, migrations Alembic, données de démonstration, serveur FastAPI et tests) se trouvent dans la [documentation backend](./backend/README.md).
 
 ## Documentation
 
-- [Backend](./backend/README.md)
-- [Frontend](./frontend/README.md)
+- [Backend](./backend/README.md) — installation, structure détaillée, authentification, bénéficiaires, caisse et rapports.
+- Frontend — à venir (aucun README dédié pour l'instant).
 
-## Contributing
+## Contribuer
 
-Describe how developers should contribute to the project.
+Respectez les règles décrites dans [AGENTS.md](./AGENTS.md) et [backend/AGENTS.md](./backend/AGENTS.md). Utilisez des messages de commit Convention Commits et ne commettez jamais le fichier `.env` ni les secrets.
 
-## License
+## Licence
 
-Specify the project license.
+À définir par l'équipe.

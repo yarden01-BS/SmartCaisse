@@ -1,4 +1,4 @@
-"""Business logic for the cashier purchase-order and transaction workflow."""
+"""Logique métier pour le flux des bons de commande et des transactions du caissier."""
 
 from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
@@ -24,19 +24,19 @@ COMPANY_CAP = 1000
 
 
 class BeneficiaryNotFoundError(Exception):
-    """Raised when the beneficiary is unknown or inactive."""
+    """Levée lorsque le bénéficiaire est inconnu ou inactif."""
 
 
 class PurchaseOrderNotFoundError(Exception):
-    """Raised when the order does not belong to this cashier."""
+    """Levée lorsque le bon de commande n'appartient pas à ce caissier."""
 
 
 class TransactionAlreadyExistsError(Exception):
-    """Raised when the order has already been paid."""
+    """Levée lorsque le bon de commande a déjà été payé."""
 
 
 def compute_shares(amount: float | Decimal) -> tuple[int, int]:
-    """Return (company_share, customer_share) for an order amount in FCFA."""
+    """Renvoie (company_share, customer_share) pour un montant de commande en FCFA."""
     total = int(Decimal(str(amount)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
     if total <= 0:
         raise ValueError("Order amount must be positive")
@@ -50,7 +50,7 @@ def compute_shares(amount: float | Decimal) -> tuple[int, int]:
 async def create_order(
     session: AsyncSession, cashier_id: int, data: PurchaseOrderCreate
 ) -> PurchaseOrderResponse:
-    """Register a purchase order handed to the cashier by a beneficiary."""
+    """Enregistre un bon de commande remis au caissier par un bénéficiaire."""
     beneficiary = await CashierBeneficiaryRepository(session).get_active_by_id(
         data.beneficiary_id
     )
@@ -74,7 +74,7 @@ async def create_order(
 async def perform_transaction(
     session: AsyncSession, cashier_id: int, order_id: int
 ) -> TransactionResponse:
-    """Pay an order and split its total between the company and the client."""
+    """Paie une commande et répartit son total entre l'entreprise et le client."""
     order = await CashierOrderRepository(session).get_for_cashier(order_id, cashier_id)
     if order is None:
         raise PurchaseOrderNotFoundError(f"Purchase order {order_id} not found")
@@ -115,7 +115,7 @@ def _to_transaction_response(
 
 
 async def get_report(session: AsyncSession, cashier_id: int) -> CashierReport:
-    """Aggregate the cashier's transactions with explicit payer breakdowns."""
+    """Agrège les transactions du caissier avec une répartition explicite par payeur."""
     rows = await CashierTransactionRepository(session).list_report_rows(cashier_id)
     periods = [ReportPeriod.model_validate(row) for row in rows]
     return CashierReport(

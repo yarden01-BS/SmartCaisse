@@ -1,4 +1,4 @@
-"""Tests for the authenticated user's profile endpoint."""
+"""Tests pour le point d'accès au profil de l'utilisateur authentifié."""
 
 import asyncio
 from collections.abc import Iterator

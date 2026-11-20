@@ -133,17 +133,29 @@ Entity-specific filenames:
 
 ## 11. Startup Commands
 
-Run all commands from the `backend` folder.
+Run the database commands from the repository root, then all Python commands from the `backend` folder.
 
 ### First-time setup
 
 ```bash
-# Install dependencies (creates the .venv automatically)
+# From the repository root: copy the example config to the root .env (never commit it)
+cp .env.example .env
+# Windows PowerShell: Copy-Item .env.example .env
+
+# Start PostgreSQL and wait until the db service is healthy
+docker compose up -d
+docker compose ps
+
+# From backend/: install dependencies (creates backend/.venv automatically)
+cd backend
 uv sync
 
-# Create your .env file from the example (never commit it)
-cp .env.example .env
+# Create the schema and add development data once on a fresh database
+uv run alembic upgrade head
+uv run python -m src.seed
 ```
+
+`uv run` automatically uses `backend/.venv`; activating it manually is optional.
 
 ### Database migrations (Alembic)
 
@@ -161,16 +173,16 @@ uv run alembic downgrade -1
 uv run alembic current
 ```
 
-Always review the generated file in `alembic/versions/` before running `alembic upgrade head`.
+Always review the generated file in `migrations/versions/` before running `alembic upgrade head`.
 
 ### Run the app (FastAPI)
 
 ```bash
 # Development (auto-reload on code changes)
-uv run uvicorn app.main:app --reload
+uv run uvicorn src.main:app --reload
 
 # Production
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+uv run uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
 
 - API: http://localhost:8000
@@ -201,4 +213,4 @@ uv remove package-name
 2. `uv run alembic revision --autogenerate -m "message"`
 3. Review the migration file.
 4. `uv run alembic upgrade head`
-5. `uv run uvicorn app.main:app --reload`
+5. `uv run uvicorn src.main:app --reload`

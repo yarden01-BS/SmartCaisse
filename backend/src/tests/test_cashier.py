@@ -1,4 +1,4 @@
-"""Tests for the cashier purchase-order and transaction workflow."""
+"""Tests pour le flux des bons de commande et des transactions du caissier."""
 
 import asyncio
 from collections.abc import Iterator

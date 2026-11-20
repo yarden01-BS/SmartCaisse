@@ -1,4 +1,4 @@
-"""Insert fake data into every table for local development."""
+"""Insère des données fictives dans toutes les tables pour le développement local."""
 
 import asyncio
 import random
@@ -33,12 +33,12 @@ fake = Faker()
 
 
 def make_face_embedding() -> list[float]:
-    """Faker has no vector provider, so build a 512-dim embedding directly."""
+    """Faker n'a pas de fournisseur de vecteurs, donc on construit directement un plongement de 512 dimensions."""
     return [round(random.random(), 6) for _ in range(512)]
 
 
 async def seed() -> None:
-    """Populate all tables with fake but relationally consistent data."""
+    """Remplit toutes les tables avec des données fictives mais cohérentes sur le plan relationnel."""
     fake.seed_instance(42)
     random.seed(42)
 

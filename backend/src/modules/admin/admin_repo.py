@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.src.db.base import Beneficiary
-from backend.src.db.base_repo import BaseRepository
+from ...db.base_repo import BaseRepository
+from ...db.models import Beneficiary
 
 
 class CashierRepository(BaseRepository[Beneficiary]):

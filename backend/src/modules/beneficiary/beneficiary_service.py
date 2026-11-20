@@ -1,4 +1,4 @@
-"""Business logic for beneficiary administration."""
+"""Logique métier pour l'administration des bénéficiaires."""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +13,7 @@ from .beneficiary_schemas import (
 
 
 class BeneficiaryNotFoundError(Exception):
-    """Raised when no beneficiary matches the requested id."""
+    """Levée lorsqu'aucun bénéficiaire ne correspond à l'identifiant demandé."""
 
 
 def _to_response(beneficiary: Beneficiary) -> BeneficiaryResponse:
@@ -21,7 +21,7 @@ def _to_response(beneficiary: Beneficiary) -> BeneficiaryResponse:
 
 
 async def create(session: AsyncSession, data: BeneficiaryCreate) -> BeneficiaryResponse:
-    """Create a new active beneficiary."""
+    """Crée un nouveau bénéficiaire actif."""
     repository = BeneficiaryRepository(session)
     beneficiary = Beneficiary(
         first_name=data.first_name,
@@ -36,13 +36,13 @@ async def create(session: AsyncSession, data: BeneficiaryCreate) -> BeneficiaryR
 async def list_all(
     session: AsyncSession, sort: BeneficiarySort, is_active: bool | None
 ) -> list[BeneficiaryResponse]:
-    """Return employees (beneficiaries) sorted and filtered as requested."""
+    """Renvoie les employés (bénéficiaires) triés et filtrés selon la demande."""
     beneficiaries = await BeneficiaryRepository(session).list_all(sort, is_active)
     return [_to_response(beneficiary) for beneficiary in beneficiaries]
 
 
 async def get(session: AsyncSession, beneficiary_id: int) -> BeneficiaryResponse:
-    """Return one beneficiary or raise BeneficiaryNotFoundError."""
+    """Renvoie un bénéficiaire ou lève BeneficiaryNotFoundError."""
     beneficiary = await BeneficiaryRepository(session).get_by_id(beneficiary_id)
     if beneficiary is None:
         raise BeneficiaryNotFoundError(f"Beneficiary {beneficiary_id} not found")
@@ -52,7 +52,7 @@ async def get(session: AsyncSession, beneficiary_id: int) -> BeneficiaryResponse
 async def update(
     session: AsyncSession, beneficiary_id: int, data: BeneficiaryUpdate
 ) -> BeneficiaryResponse:
-    """Apply the supplied fields to an existing beneficiary."""
+    """Applique les champs fournis à un bénéficiaire existant."""
     repository = BeneficiaryRepository(session)
     beneficiary = await repository.get_by_id(beneficiary_id)
     if beneficiary is None:
@@ -63,7 +63,7 @@ async def update(
 
 
 async def suspend(session: AsyncSession, beneficiary_id: int) -> BeneficiaryResponse:
-    """Mark a beneficiary as inactive without deleting its data."""
+    """Marque un bénéficiaire comme inactif sans supprimer ses données."""
     repository = BeneficiaryRepository(session)
     beneficiary = await repository.get_by_id(beneficiary_id)
     if beneficiary is None:

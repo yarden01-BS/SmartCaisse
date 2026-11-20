@@ -1,4 +1,4 @@
-"""Database access for user profiles."""
+"""Accès à la base de données pour les profils utilisateurs."""
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ class UserRepository(BaseRepository[Account]):
         super().__init__(session, Account)
 
     async def get_with_profile(self, account_id: int) -> Account | None:
-        """Load an account together with its beneficiary or cashier profile."""
+        """Charge un compte ainsi que son profil bénéficiaire ou caissier."""
         result = await self._session.execute(
             select(Account)
             .where(Account.id == account_id)

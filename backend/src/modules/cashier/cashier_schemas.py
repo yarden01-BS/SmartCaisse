@@ -1,4 +1,4 @@
-"""Schemas for the cashier purchase-order and transaction workflow."""
+"""Schémas pour le flux des bons de commande et des transactions du caissier."""
 
 from datetime import date, datetime
 
