@@ -1,0 +1,30 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.20.1",
+    "asyncpg>=0.32.0",
+    "bcrypt>=5.0.0",
+    "dotenv>=0.9.9",
+    "fastapi[standard]>=0.163.1",
+    "pgvector>=0.5.1",
+    "psycopg2>=2.9.13",
+    "pyjwt>=2.15.1",
+    "sqlalchemy[asyncio]>=2.1.9",
+]
+
+[dependency-groups]
+dev = [
+    "faker>=40.54.0",
+    "httpx>=0.28.1",
+    "pyrefly>=1.4.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["src/tests"]
