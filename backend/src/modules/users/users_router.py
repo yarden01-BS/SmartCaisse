@@ -1,4 +1,4 @@
-"""HTTP routes for the authenticated user."""
+"""Routes HTTP pour l'utilisateur authentifié."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +16,7 @@ async def get_me(
     account_id: int = Depends(get_current_account_id),
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> UserProfileResponse:
-    """Return the profile of the account that owns the access token."""
+    """Renvoie le profil du compte auquel appartient le jeton d'accès."""
     try:
         return await users_service.get_profile(session, account_id)
     except users_service.AccountNotFoundError as exc:

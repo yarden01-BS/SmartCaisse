@@ -1,80 +1,171 @@
 # Backend
 
-Backend application for SmartCaisse, responsible for business logic, database operations, authentication, and API endpoints.
+Backend de SmartCaisse : logique métier, accès à la base de données, authentification et points d'entrée de l'API FastAPI.
 
-## Project Structure
+## Structure du projet
 
 ```text
 backend/
-├── migrations/
-│   └── versions/
-└── src/
-    ├── core/
+├── migrations/                # Configuration et historique des migrations Alembic
+│   └── versions/              # Scripts de migration de la base de données
+└── src/                       # Code source de l'application FastAPI
+    ├── core/                  # Configuration, utilitaires partagés et sécurité bcrypt/JWT
     │   ├── config.py
     │   └── security.py
-    ├── db/
+    ├── db/                    # Connexion, sessions et modèles SQLAlchemy
     │   ├── database.py
     │   ├── session.py
     │   └── models.py
-    ├── modules/
+    ├── modules/               # Domaines métier de l'application
     │   ├── admin/
     │   ├── auth/
     │   ├── beneficiary/
     │   ├── cashier/
     │   └── users/
-    ├── main.py
-    ├── seed.py
-    └── tests/
+    ├── main.py                # Point d'entrée FastAPI et enregistrement des routeurs
+    ├── seed.py                # Données fictives de développement et comptes de démonstration
+    └── tests/                 # Tests automatisés (pytest)
 ```
 
-### Directories
+### Rôle des dossiers
 
-| Directory | Description |
+| Dossier | Description |
 |---|---|
-| `migrations/` | Database migration configuration and migration history managed by Alembic. |
-| `migrations/versions/` | Contains individual database migration scripts. |
-| `src/` | Contains the backend application source code. |
-| `src/core/` | Core application configuration, shared utilities, and bcrypt/JWT security helpers. |
-| `src/db/` | Database configuration, connection management, SQLAlchemy models, and database-related utilities. |
-| `src/modules/` | Contains application modules organized around business domains. |
-| `src/modules/admin/` | Functionality and business logic related to administrators. |
-| `src/modules/auth/` | Login endpoint and the bearer-token dependencies shared with other modules. |
-| `src/modules/beneficiary/` | Admin-only create, update, and suspend operations for beneficiaries. |
-| `src/modules/cashier/` | Cashier-only purchase orders, transactions, and accounting reports. |
-| `src/modules/users/` | Profile of the logged-in account, exposed through `GET /me`. |
-| `src/main.py` | FastAPI application entry point; registers the routers. |
-| `src/seed.py` | Inserts fake development data, including demo login accounts. |
-| `src/tests/` | Backend automated tests. |
+| `migrations/` | Configuration et historique des migrations de base de données gérées par Alembic. |
+| `migrations/versions/` | Contient les scripts de migration individuels. |
+| `src/` | Code source de l'application backend. |
+| `src/core/` | Configuration centrale, utilitaires partagés et helpers de sécurité bcrypt/JWT. |
+| `src/db/` | Configuration de la base, gestion des connexions, modèles SQLAlchemy et utilitaires associés. |
+| `src/modules/` | Modules applicatifs organisés par domaine métier. |
+| `src/modules/admin/` | Fonctionnalités et logique métier liées aux administrateurs. |
+| `src/modules/auth/` | Route de connexion et dépendances de jetons partagées avec les autres modules. |
+| `src/modules/beneficiary/` | Création, modification et suspension des bénéficiaires (administrateurs uniquement). |
+| `src/modules/cashier/` | Bons de commande, transactions et rapports comptables (caissiers uniquement). |
+| `src/modules/users/` | Profil du compte connecté, exposé via `GET /me`. |
+| `src/main.py` | Point d'entrée de l'application FastAPI ; enregistre les routeurs. |
+| `src/seed.py` | Insère des données de développement, dont les comptes de démonstration. |
+| `src/tests/` | Tests automatisés du backend. |
 
-### Module Structure
+### Organisation d'un module
 
-Each module follows a consistent naming convention. Files are prefixed with the corresponding entity or domain name to make their responsibilities explicit.
+Chaque module suit une convention de nommage cohérente. Les fichiers sont préfixés par l'entité ou le domaine correspondant afin de rendre leur responsabilité explicite.
 
-| Naming Convention | Responsibility |
+| Convention | Responsabilité |
 |---|---|
-| `{entity}_router.py` | API endpoints and HTTP request handling. |
-| `{entity}_schemas.py` | Pydantic schemas for validation and serialization. |
-| `{entity}_service.py` | Business logic and application operations. |
-| `{entity}_repo.py` | Database queries and persistence operations. |
+| `{entity}_router.py` | Points d'entrée de l'API et gestion des requêtes HTTP. |
+| `{entity}_schemas.py` | Schémas Pydantic de validation et de sérialisation. |
+| `{entity}_service.py` | Logique métier et opérations applicatives. |
+| `{entity}_repo.py` | Requêtes et opérations de persistance en base de données. |
 
-Each module maintains its own separation of concerns, keeping routing, validation, business logic, and database access independent. The auth module also contains `auth_deps.py`, which holds the token-validation dependencies reused by other modules.
+Chaque module conserve sa propre séparation des responsabilités : routage, validation, logique métier et accès aux données restent indépendants. Le module `auth` contient également `auth_deps.py`, qui regroupe les dépendances de validation des jetons réutilisées par les autres modules.
 
 ## Architecture
 
-The backend follows a modular architecture, organizing application functionality by business domain.
+Le backend suit une architecture modulaire : les fonctionnalités sont organisées par domaine métier. Chaque module gère ses propres fonctionnalités et sa logique métier, tandis que les éléments partagés sont centralisés dans `core/` et ceux liés à la base de données dans `db/`.
 
-Each module is responsible for its own features and business logic, while shared functionality is centralized in `core/` and database-related functionality in `db/`.
+## Démarrage complet (de la base de données à FastAPI)
 
-## Authentication
+Cette procédure est à suivre exactement pour un nouvel environnement. Les commandes des étapes 1 à 3 se lancent depuis la **racine du dépôt**, les suivantes depuis le dossier `backend`.
 
-Admin and cashier accounts authenticate through the same endpoints. Passwords are hashed with bcrypt and tokens are signed JWTs (HS256).
+### 1. Créer le fichier `.env`
 
-Two tokens are issued:
+La configuration est lue exclusivement depuis le fichier `.env` placé à la racine du dépôt. Il est utilisé par Docker Compose (PostgreSQL) et par le backend (SQLAlchemy, JWT, cookies).
 
-- **Access token** — short-lived (`ACCESS_TOKEN_EXPIRE_MINUTES`). Returned in the JSON response and sent by the client in the `Authorization: Bearer <access_token>` header.
-- **Refresh token** — long-lived (`REFRESH_TOKEN_EXPIRE_MINUTES`). Stored only in an `HttpOnly` cookie named `refresh_token` and used only by `/auth/refresh` and `/auth/logout`.
+```bash
+# macOS / Linux
+cp .env.example .env
 
-### 1. Log in
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+
+Ne commettez jamais ce fichier. Ajustez les valeurs si besoin, en particulier `SECRET_KEY` hors développement. Aucune valeur de configuration n'est codée en dur dans le code.
+
+### 2. Démarrer PostgreSQL
+
+```bash
+docker compose up -d
+docker compose ps
+```
+
+Le service `db` doit passer à l'état `healthy`. Le port `5432` doit être disponible. Pour arrêter la base : `docker compose down` ; pour supprimer aussi les données : `docker compose down -v`.
+
+### 3. Installer les dépendances et créer `.venv`
+
+```bash
+cd backend
+uv sync
+```
+
+`uv sync` crée l'environnement virtuel dans `backend/.venv` et installe les dépendances de `pyproject.toml` et `uv.lock`. Il n'est pas nécessaire de l'activer : toutes les commandes `uv run` l'utilisent automatiquement. Pour l'activer manuellement :
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
+
+N'utilisez jamais `pip install` dans ce projet.
+
+### 4. Appliquer les migrations
+
+```bash
+uv run alembic upgrade head
+```
+
+Cette commande crée le schéma de base et doit être exécutée avant le premier lancement et après chaque nouvelle migration.
+
+### 5. Insérer les données de démonstration (facultatif mais recommandé)
+
+```bash
+uv run python -m src.seed
+```
+
+Le script crée 3 bénéficiaires, 1 caissier et exactement 2 comptes : un administrateur lié au premier bénéficiaire et un caissier. Il ajoute aussi 20 bons de commande, 20 transactions et 8 rapports. Il **ajoute** des données : ne l'exécutez qu'une seule fois sur une base neuve, sinon les adresses e-mail de démonstration provoqueront une erreur.
+
+Comptes créés (mot de passe `password123`) :
+
+- `admin@smartcaisse.com` (administrateur, lié à un bénéficiaire) ;
+- `cashier@smartcaisse.com` (caissier).
+
+### 6. Lancer le serveur FastAPI
+
+```bash
+# Développement : rechargement automatique à chaque modification
+uv run uvicorn src.main:app --reload
+
+# Production ou test sans rechargement
+uv run uvicorn src.main:app --host 0.0.0.0 --port 8000
+```
+
+Le point d'entrée est bien `src.main:app` depuis le dossier `backend`. N'utilisez pas `app.main:app`, qui n'existe pas dans ce dépôt.
+
+- API : http://localhost:8000
+- Documentation Swagger : http://localhost:8000/docs
+
+### 7. Vérifier l'installation
+
+```bash
+uv run pytest
+uv run ruff check src migrations
+uv run ruff format --check src migrations
+uv run pyrefly check src
+```
+
+Les tests utilisent la base définie dans le `.env` racine. Si les tests échouent avec une erreur de connexion, vérifiez que Docker est démarré, que `docker compose ps` indique `healthy` et que les migrations sont appliquées.
+
+## Authentification
+
+Les comptes administrateurs et caissiers utilisent les mêmes routes de connexion. Les mots de passe sont hachés avec bcrypt et les jetons sont des JWT signés en HS256.
+
+Deux jetons sont émis :
+
+- **Jeton d'accès** — courte durée (`ACCESS_TOKEN_EXPIRE_MINUTES`). Il est renvoyé dans le corps JSON et envoyé par le client dans l'en-tête `Authorization: Bearer <access_token>`.
+- **Jeton de rafraîchissement** — longue durée (`REFRESH_TOKEN_EXPIRE_MINUTES`). Il est stocké uniquement dans un cookie `HttpOnly` nommé `refresh_token` et utilisé seulement par `/auth/refresh` et `/auth/logout`.
+
+### 1. Connexion
 
 `POST /auth/login`
 
@@ -85,7 +176,7 @@ Two tokens are issued:
 }
 ```
 
-Successful response (`200`):
+Réponse en cas de succès (`200`) :
 
 ```json
 {
@@ -96,17 +187,17 @@ Successful response (`200`):
 }
 ```
 
-The refresh token is only in the `Set-Cookie` header, never in the JSON body. An unknown email, wrong password, or inactive account returns `401` with `{"detail": "Invalid email or password"}` and no cookie is set.
+Le jeton de rafraîchissement figure uniquement dans l'en-tête `Set-Cookie`, jamais dans le corps JSON. Une adresse inconnue, un mot de passe incorrect ou un compte inactif renvoie `401` avec `{"detail": "Invalid email or password"}` et aucun cookie n'est défini.
 
-The cookie uses `HttpOnly`, `SameSite=Lax`, and `Path=/`. `Secure` is controlled by `COOKIE_SECURE`; it is `false` in local development and should be `true` in HTTPS production.
+Le cookie utilise `HttpOnly`, `SameSite=Lax` et `Path=/`. L'attribut `Secure` est contrôlé par `COOKIE_SECURE` : `false` en développement local, `true` en production HTTPS.
 
-### 2. Read the logged-in user
+### 2. Lire le profil connecté
 
-`GET /me` requires `Authorization: Bearer <access_token>`. The refresh cookie is deliberately **not** accepted by protected routes. A refresh token used as a bearer token is rejected with `401`.
+`GET /me` exige l'en-tête `Authorization: Bearer <access_token>`. Le cookie de rafraîchissement est volontairement **refusé** sur les routes protégées : un jeton de rafraîchissement utilisé comme jeton d'accès renvoie `401`.
 
-The account id comes from the token's `sub` claim, never from the request body, so this always returns the profile of the authenticated account.
+L'identifiant du compte provient de la revendication `sub` du jeton, jamais du corps de la requête : la réponse correspond donc toujours au compte authentifié.
 
-Response (`200`) for an admin account:
+Réponse (`200`) pour un administrateur :
 
 ```json
 {
@@ -125,79 +216,70 @@ Response (`200`) for an admin account:
 }
 ```
 
-For a cashier account, `profile` instead contains `id`, `first_name`, `last_name`, `company`, and `is_active`. A missing or invalid token, or an account that no longer exists or is inactive, returns `401`.
+Pour un caissier, `profile` contient `id`, `first_name`, `last_name`, `company` et `is_active`. Un jeton absent ou invalide, ou un compte supprimé ou inactif, renvoie `401`.
 
-### 3. Refresh
+### 3. Rafraîchir le jeton
 
-`POST /auth/refresh` reads the `refresh_token` cookie. It validates the signature, the `exp` claim and the `type=refresh` claim, then checks the `revoked_tokens` table.
+`POST /auth/refresh` lit le cookie `refresh_token`. Il valide la signature, la revendication `exp` et la revendication `type=refresh`, puis vérifie la table `revoked_tokens`.
 
-On success it:
+En cas de succès :
 
-1. records the old token's `jti` as revoked (rotation),
-2. issues a new access token and a new refresh token,
-3. sets the new `refresh_token` cookie and returns the new access token in JSON.
+1. le `jti` de l'ancien jeton est enregistré comme révoqué (rotation) ;
+2. un nouveau jeton d'accès et un nouveau jeton de rafraîchissement sont émis ;
+3. le nouveau cookie est posé et le nouveau jeton d'accès est renvoyé dans le corps JSON.
 
-Expired, malformed, revoked, or already-rotated refresh tokens return `401`. A missing cookie also returns `401`.
+Un jeton expiré, mal formé, révoqué ou déjà utilisé renvoie `401`. Un cookie absent renvoie également `401`.
 
-### 4. Log out
+### 4. Se déconnecter
 
-`POST /auth/logout` records the cookie's refresh-token `jti` as revoked and clears the cookie. It returns `{"detail": "Logged out"}`. The access token is stateless and stays valid until it expires; the client must discard it.
+`POST /auth/logout` enregistre le `jti` du jeton contenu dans le cookie comme révoqué et efface le cookie. La réponse est `{"detail": "Logged out"}`. Le jeton d'accès étant sans état, il reste valable jusqu'à son expiration : le client doit le supprimer.
 
-The revocation table is created by migration `1de417ce039b_add_revoked_refresh_tokens.py`.
+La table de révocation est créée par la migration `1de417ce039b_add_revoked_refresh_tokens.py`.
 
-### curl example
+### Exemple avec curl
+
+Sous Windows, utilisez `curl.exe` à la place de `curl`.
 
 ```bash
-# Login: save the refresh cookie and read the access token from the JSON body
-curl -c cookies.txt -X POST http://localhost:8000/auth/login ^
-  -H "Content-Type: application/json" ^
-  -d "{\"email\":\"admin@smartcaisse.com\",\"password\":\"password123\"}"
+# Connexion : enregistre le cookie et lit le jeton d'accès dans la réponse JSON
+curl -c cookies.txt -X POST http://localhost:8000/auth/login -H "Content-Type: application/json" -d '{"email":"admin@smartcaisse.com","password":"password123"}'
 
-# Use the access token as a bearer token
+# Utilisation du jeton d'accès comme jeton bearer
 curl -H "Authorization: Bearer <access_token>" http://localhost:8000/me
 
-# Rotate the refresh token (cookie is sent automatically)
+# Rotation du jeton de rafraîchissement (le cookie est envoyé automatiquement)
 curl -b cookies.txt -c cookies.txt -X POST http://localhost:8000/auth/refresh
 
-# Revoke the refresh token and clear the cookie
+# Révocation du jeton et suppression du cookie
 curl -b cookies.txt -c cookies.txt -X POST http://localhost:8000/auth/logout
 ```
 
-### Demo accounts
+### Paramètres d'authentification
 
-`src/seed.py` creates bcrypt-hashed demo accounts with password `password123`:
+Toutes les variables sont lues depuis le fichier `.env` à la racine du dépôt (copiez d'abord `.env.example`). Il n'existe aucune valeur par défaut codée en dur.
 
-- `admin@smartcaisse.com` (admin, linked to a beneficiary)
-- `cashier@smartcaisse.com` (cashier)
-
-Re-run `uv run python -m src.seed` to create them (the script appends rows). The current local database also contains `donaldgarcia@example.net` / `password123`.
-
-### Authentication settings
-
-All settings are read from the `.env` file at the repository root (copy `.env.example` there first). There are no hardcoded defaults.
-
-| Variable | Example | Description |
+| Variable | Exemple | Description |
 |---|---|---|
-| `SECRET_KEY` | long random string | Key used to sign and verify JWTs. Replace with a long random value in production. |
-| `ALGORITHM` | `HS256` | JWT signing algorithm. |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access-token lifetime in minutes. |
-| `REFRESH_TOKEN_EXPIRE_MINUTES` | `10080` | Refresh-token lifetime in minutes (7 days); also sets the cookie's `Max-Age`. |
-| `COOKIE_SECURE` | `false` | Set to `true` in production so the cookie is only sent over HTTPS. |
+| `SECRET_KEY` | chaîne aléatoire longue | Clé de signature et de vérification des JWT. À remplacer par une valeur longue et aléatoire en production. |
+| `ALGORITHM` | `HS256` | Algorithme de signature des JWT. |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Durée de vie du jeton d'accès, en minutes. |
+| `REFRESH_TOKEN_EXPIRE_MINUTES` | `10080` | Durée de vie du jeton de rafraîchissement, en minutes (7 jours) ; définit aussi le `Max-Age` du cookie. |
+| `COOKIE_SECURE` | `false` | À passer à `true` en production pour n'envoyer le cookie qu'en HTTPS. |
 
-Changing `SECRET_KEY` invalidates all existing tokens.
+Modifier `SECRET_KEY` invalide tous les jetons existants.
 
-## Beneficiary administration
+## Administration des bénéficiaires
 
-These routes are available to **admin accounts only**. They require `Authorization: Bearer <access_token>`; a cashier token receives `403`, and no token receives `401`.
+Ces routes sont accessibles **uniquement aux comptes administrateurs**. Elles exigent `Authorization: Bearer <access_token>` ; un jeton de caissier renvoie `403` et l'absence de jeton renvoie `401`.
 
-| Method | Path | Description |
+| Méthode | Chemin | Description |
 |---|---|---|
-| `GET` | `/beneficiaries` | List employees (beneficiaries), sorted and filtered. |
-| `POST` | `/beneficiaries` | Create an active beneficiary. |
-| `PATCH` | `/beneficiaries/{id}` | Update only the supplied fields. |
-| `POST` | `/beneficiaries/{id}/suspend` | Set `is_active` to `false`. |
+| `GET` | `/beneficiaries` | Lister les employés (bénéficiaires), avec tri et filtre. |
+| `POST` | `/beneficiaries` | Créer un bénéficiaire actif. |
+| `PATCH` | `/beneficiaries/{id}` | Modifier uniquement les champs fournis. |
+| `POST` | `/beneficiaries/{id}/suspend` | Passer `is_active` à `false`. |
 
-Create body:
+Corps de création :
 
 ```json
 {
@@ -208,7 +290,7 @@ Create body:
 }
 ```
 
-`situation` accepts `permanent` or `stagiare`. Response (`201`):
+`situation` accepte `permanent` ou `stagiare`. Réponse (`201`) :
 
 ```json
 {
@@ -222,18 +304,18 @@ Create body:
 }
 ```
 
-Update accepts any subset of `first_name`, `last_name`, `profession`, and `situation`. An unknown id returns `404`. Suspension keeps the data and only flips `is_active`.
+La modification accepte n'importe quel sous-ensemble de `first_name`, `last_name`, `profession` et `situation`. Un identifiant inconnu renvoie `404`. La suspension conserve les données et ne fait que basculer `is_active`.
 
-### List employees
+### Lister les employés
 
-`GET /beneficiaries` returns a JSON array. Query parameters:
+`GET /beneficiaries` renvoie un tableau JSON. Paramètres de requête :
 
-| Parameter | Values | Default | Description |
+| Paramètre | Valeurs | Défaut | Description |
 |---|---|---|---|
-| `sort` | `old`, `recent` | `recent` | Order by creation date, oldest or newest first. |
-| `is_active` | `true`, `false` | none | Keep only active or inactive employees. Omit to return both. |
+| `sort` | `old`, `recent` | `recent` | Tri par date de création : les plus anciens ou les plus récents d'abord. |
+| `is_active` | `true`, `false` | aucun | Ne garder que les employés actifs ou inactifs. Omettre pour les renvoyer tous. |
 
-Examples:
+Exemples :
 
 ```text
 GET /beneficiaries
@@ -242,33 +324,33 @@ GET /beneficiaries?is_active=false
 GET /beneficiaries?sort=old&is_active=true
 ```
 
-An invalid `sort` or `is_active` value returns `422`.
+Une valeur invalide pour `sort` ou `is_active` renvoie `422`.
 
-## Cashier workflow
+## Parcours caissier
 
-These routes are available to **cashier accounts only**. They require `Authorization: Bearer <access_token>`; an admin token receives `403`, and no token receives `401`. A cashier can only process orders that the cashier himself registered.
+Ces routes sont accessibles **uniquement aux comptes caissiers**. Elles exigent `Authorization: Bearer <access_token>` ; un jeton d'administrateur renvoie `403` et l'absence de jeton renvoie `401`. Un caissier ne peut traiter que les commandes qu'il a lui-même enregistrées.
 
-| Method | Path | Description |
+| Méthode | Chemin | Description |
 |---|---|---|
-| `POST` | `/cashier/purchase-orders` | Register a purchase order handed over by a beneficiary. |
-| `POST` | `/cashier/purchase-orders/{id}/transactions` | Perform the payment and record the subsidy split. |
-| `GET` | `/cashier/reports` | Return the accounting breakdown of the cashier's transactions. |
+| `POST` | `/cashier/purchase-orders` | Enregistrer un bon de commande remis par un bénéficiaire. |
+| `POST` | `/cashier/purchase-orders/{id}/transactions` | Effectuer le paiement et enregistrer la répartition de la subvention. |
+| `GET` | `/cashier/reports` | Renvoyer la ventilation comptable des transactions du caissier. |
 
-### Subsidy rules
+### Règles de subvention
 
-- The company covers **50%** of the order total; the beneficiary pays the remaining 50%.
-- The company contribution is capped at **1,000 FCFA per order**.
-- When the total exceeds **2,000 FCFA**, the company contribution stays at 1,000 FCFA and the beneficiary pays the whole difference.
-- Amounts are rounded to the nearest FCFA, and `company_share + customer_share` always equals `total_amount`.
+- L'entreprise prend en charge **50 %** du montant de la commande ; le bénéficiaire paie les 50 % restants.
+- La contribution de l'entreprise est plafonnée à **1 000 FCFA par commande**.
+- Au-delà de **2 000 FCFA**, la part de l'entreprise reste à 1 000 FCFA et le bénéficiaire paie toute la différence.
+- Les montants sont arrondis au FCFA le plus proche et `company_share + customer_share` est toujours égal à `total_amount`.
 
-| Order total | Company share | Client share |
+| Total de la commande | Part entreprise | Part client |
 |---:|---:|---:|
-| 1,000 | 500 | 500 |
-| 2,000 | 1,000 | 1,000 |
-| 2,001 | 1,000 | 1,001 |
-| 2,500 | 1,000 | 1,500 |
+| 1 000 | 500 | 500 |
+| 2 000 | 1 000 | 1 000 |
+| 2 001 | 1 000 | 1 001 |
+| 2 500 | 1 000 | 1 500 |
 
-### 1. Register the order
+### 1. Enregistrer la commande
 
 `POST /cashier/purchase-orders`
 
@@ -280,7 +362,7 @@ These routes are available to **cashier accounts only**. They require `Authoriza
 }
 ```
 
-Response (`201`):
+Réponse (`201`) :
 
 ```json
 {
@@ -293,13 +375,13 @@ Response (`201`):
 }
 ```
 
-An unknown or inactive beneficiary returns `404`.
+Un bénéficiaire inconnu ou inactif renvoie `404`.
 
-### 2. Perform the transaction
+### 2. Effectuer la transaction
 
-`POST /cashier/purchase-orders/41/transactions` has no request body. The split is computed by the backend.
+`POST /cashier/purchase-orders/41/transactions` n'attend aucun corps de requête : la répartition est calculée par le backend.
 
-Response (`201`):
+Réponse (`201`) :
 
 ```json
 {
@@ -315,11 +397,11 @@ Response (`201`):
 }
 ```
 
-An unknown order returns `404`. Paying the same order twice returns `409`.
+Une commande inconnue renvoie `404`. Payer deux fois la même commande renvoie `409`.
 
-### 3. Accounting traceability
+### 3. Traçabilité comptable
 
-`GET /cashier/reports` aggregates the cashier's persisted transactions by day. Every row and the overall totals explicitly separate the amounts:
+`GET /cashier/reports` agrège les transactions enregistrées du caissier par jour. Chaque ligne et les totaux généraux séparent explicitement les montants :
 
 ```json
 {
@@ -339,88 +421,61 @@ An unknown order returns `404`. Paying the same order twice returns `409`.
 }
 ```
 
-## Database
+## Base de données
 
-Database operations are handled using SQLAlchemy with asynchronous support.
-Alembic is used to manage database schema migrations.
-Docker is used to containerize the database.
+Les opérations sont réalisées avec SQLAlchemy en asynchrone. Alembic gère les migrations de schéma et Docker héberge PostgreSQL. La table `revoked_tokens` conserve les identifiants `jti` des jetons de rafraîchissement révoqués.
 
-## Startup Commands
+## Commandes utiles
 
-Run all commands from the `backend` folder. This project uses `uv` for dependency management.
+Toutes les commandes ci-dessous se lancent depuis `backend` avec l'environnement créé par `uv sync`.
 
-### First-time setup
+### Migrations Alembic
 
 ```bash
-# 1. Install dependencies (creates the .venv automatically)
-uv sync
-
-# 2. Create the .env file at the repository root (never commit it)
-cp ../.env.example ../.env
-```
-
-### Database migrations (Alembic)
-
-```bash
-# Apply all migrations (run this before starting the app)
+# Appliquer toutes les migrations
 uv run alembic upgrade head
 
-# Create a new migration after changing a model
-uv run alembic revision --autogenerate -m "describe the change"
+# Créer une migration après une modification de modèle
+uv run alembic revision --autogenerate -m "description du changement"
 
-# Undo the last migration
+# Annuler la dernière migration
 uv run alembic downgrade -1
 
-# Show the current migration version
+# Afficher la version courante
 uv run alembic current
 ```
 
-Always review the generated file in `migrations/versions/` before running `alembic upgrade head`.
+Toujours relire le fichier généré dans `migrations/versions/` avant d'exécuter `uv run alembic upgrade head`.
 
-### Seed development data
-
-```bash
-uv run python -m src.seed
-```
-
-### Run the app (FastAPI)
-
-```bash
-# Development (auto-reload on code changes)
-uv run uvicorn src.main:app --reload
-
-# Production
-uv run uvicorn src.main:app --host 0.0.0.0 --port 8000
-```
-
-- API: http://localhost:8000
-- Swagger docs: http://localhost:8000/docs
-
-### Run the tests
+### Tests et qualité
 
 ```bash
 uv run pytest
+uv run ruff check src migrations
+uv run ruff format --check src migrations
+uv run pyrefly check src
 ```
 
-### Manage dependencies
+### Gestion des dépendances
 
 ```bash
-# Add a package
-uv add package-name
+# Ajouter une dépendance
+uv add nom-du-paquet
 
-# Add a development-only package (tests, linters)
-uv add --dev package-name
+# Ajouter une dépendance de développement (tests, linters)
+uv add --dev nom-du-paquet
 
-# Remove a package
-uv remove package-name
+# Supprimer une dépendance
+uv remove nom-du-paquet
 ```
 
-Never use `pip install` in this project. Always use `uv add` so that `pyproject.toml` and `uv.lock` stay in sync.
+`uv add` maintient `pyproject.toml` et `uv.lock` synchronisés. N'utilisez pas `pip install`.
 
-### Typical workflow
+### Workflow typique
 
-1. Change a model.
-2. `uv run alembic revision --autogenerate -m "message"`
-3. Review the migration file.
-4. `uv run alembic upgrade head`
-5. `uv run uvicorn src.main:app --reload`
+1. Modifier un modèle.
+2. `uv run alembic revision --autogenerate -m "message"`.
+3. Relire le fichier de migration généré.
+4. `uv run alembic upgrade head`.
+5. `uv run uvicorn src.main:app --reload`.
+6. `uv run pytest` puis les commandes de lint.

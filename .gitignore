@@ -1,5 +1,8 @@
+# unecessary folder
+backend/.venv
+frontend/node_modules/
 
-temp/
+# .env files
 .env
 .env.*
 !.env.example

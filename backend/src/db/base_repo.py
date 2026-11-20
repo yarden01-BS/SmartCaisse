@@ -1,13 +1,11 @@
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import Base
 
-T = TypeVar("T", bound=Base)
 
-
-class BaseRepository(Generic[T]):
+class BaseRepository[T: Base]:
     def __init__(self, session: AsyncSession, model: type[T]):
         self._session = session
         self._model = model

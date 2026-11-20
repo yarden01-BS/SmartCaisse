@@ -1,9 +1,9 @@
-"""SmartCaisse API entry point."""
+"""Point d'entrée de l'API SmartCaisse."""
 
 import sys
 from pathlib import Path
 
-# Allow `uvicorn src.main:app` from backend/ and `uvicorn main:app` from backend/src/.
+# Permet `uvicorn src.main:app` depuis backend/ et `uvicorn main:app` depuis backend/src/.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi import FastAPI

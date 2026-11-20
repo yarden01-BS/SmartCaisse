@@ -1,4 +1,4 @@
-"""Tests for refresh-token rotation and revocation."""
+"""Tests pour la rotation et la révocation des jetons d'actualisation."""
 
 import asyncio
 from collections.abc import Iterator

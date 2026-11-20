@@ -1,4 +1,4 @@
-"""Database access for the cashier workflow."""
+"""Accès à la base de données pour le flux du caissier."""
 
 from typing import Any
 
@@ -30,7 +30,7 @@ class CashierOrderRepository(BaseRepository[PurchaseOrder]):
     async def get_for_cashier(
         self, order_id: int, cashier_id: int
     ) -> PurchaseOrder | None:
-        """Lock an order so it cannot be paid twice by concurrent requests."""
+        """Verrouille une commande afin qu'elle ne puisse être payée deux fois par des requêtes concurrentes."""
         result = await self._session.execute(
             select(PurchaseOrder)
             .where(
@@ -53,7 +53,7 @@ class CashierTransactionRepository(BaseRepository[Transaction]):
         return result.scalars().first()
 
     async def list_report_rows(self, cashier_id: int) -> list[dict[str, Any]]:
-        """Aggregate the cashier's transactions by day."""
+        """Agrège les transactions du caissier par jour."""
         period = cast(Transaction.created_at, Date).label("period")
         statement = (
             select(

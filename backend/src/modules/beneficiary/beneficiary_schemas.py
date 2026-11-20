@@ -1,4 +1,4 @@
-"""Schemas for beneficiary administration."""
+"""Schémas pour l'administration des bénéficiaires."""
 
 from datetime import datetime
 from typing import Literal

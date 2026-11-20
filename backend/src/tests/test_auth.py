@@ -1,4 +1,4 @@
-"""Tests for account authentication."""
+"""Tests pour l'authentification des comptes."""
 
 import asyncio
 from collections.abc import Iterator

@@ -1,4 +1,4 @@
-"""HTTP routes for beneficiary administration (admin only)."""
+"""Routes HTTP pour l'administration des bénéficiaires (administrateurs uniquement)."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +30,7 @@ async def list_beneficiaries(
     is_active: bool | None = None,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> list[BeneficiaryResponse]:
-    """List employees (beneficiaries), oldest/recent first and optionally by status."""
+    """Liste les employés (bénéficiaires), les plus anciens/récents en premier et éventuellement par statut."""
     return await beneficiary_service.list_all(session, sort, is_active)
 
 
@@ -41,7 +41,7 @@ async def create_beneficiary(
     data: BeneficiaryCreate,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> BeneficiaryResponse:
-    """Create a beneficiary."""
+    """Crée un bénéficiaire."""
     return await beneficiary_service.create(session, data)
 
 
@@ -51,7 +51,7 @@ async def update_beneficiary(
     data: BeneficiaryUpdate,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> BeneficiaryResponse:
-    """Update the supplied fields of a beneficiary."""
+    """Met à jour les champs fournis d'un bénéficiaire."""
     try:
         return await beneficiary_service.update(session, beneficiary_id, data)
     except beneficiary_service.BeneficiaryNotFoundError as exc:
@@ -63,7 +63,7 @@ async def suspend_beneficiary(
     beneficiary_id: int,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> BeneficiaryResponse:
-    """Suspend a beneficiary by setting is_active to false."""
+    """Suspend un bénéficiaire en passant is_active à false."""
     try:
         return await beneficiary_service.suspend(session, beneficiary_id)
     except beneficiary_service.BeneficiaryNotFoundError as exc:

@@ -1,4 +1,4 @@
-"""Tests for beneficiary administration."""
+"""Tests pour l'administration des bénéficiaires."""
 
 import asyncio
 from collections.abc import Iterator

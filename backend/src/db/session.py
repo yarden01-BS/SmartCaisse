@@ -1,4 +1,4 @@
-"""Database session dependency for FastAPI."""
+"""Dépendance de session de base de données pour FastAPI."""
 
 from collections.abc import AsyncIterator
 
@@ -8,6 +8,6 @@ from .database import SessionLocal
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:
-    """Yield a session, committing on success and rolling back on error."""
+    """Fournit une session, validant en cas de succès et annulant en cas d'erreur."""
     async with SessionLocal() as session, session.begin():
         yield session

@@ -1,4 +1,4 @@
-"""Business logic for account authentication and refresh-token rotation."""
+"""Logique métier pour l'authentification des comptes et la rotation des jetons d'actualisation."""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -18,11 +18,11 @@ from .auth_schemas import LoginRequest, LoginResponse
 
 
 class InvalidCredentialsError(Exception):
-    """Raised when the email/password pair does not match an active account."""
+    """Levée lorsque la paire e-mail/mot de passe ne correspond à aucun compte actif."""
 
 
 class InvalidRefreshTokenError(Exception):
-    """Raised when a refresh token is missing, invalid, expired, or revoked."""
+    """Levée lorsqu'un jeton d'actualisation est absent, invalide, expiré ou révoqué."""
 
 
 def _claims(account: Account) -> dict[str, str]:
@@ -47,7 +47,7 @@ async def _issue_tokens(account: Account) -> tuple[str, str, LoginResponse]:
 async def authenticate(
     session: AsyncSession, credentials: LoginRequest
 ) -> tuple[str, str, LoginResponse]:
-    """Check credentials and return a new access/refresh token pair."""
+    """Vérifie les identifiants et renvoie une nouvelle paire de jetons d'accès/d'actualisation."""
     account = await AccountRepository(session).get_by_email(credentials.email)
 
     if (
@@ -73,7 +73,7 @@ def _refresh_payload(token: str) -> dict[str, Any]:
 async def refresh(
     session: AsyncSession, token: str | None
 ) -> tuple[str, str, LoginResponse]:
-    """Rotate a valid refresh token and return a new token pair."""
+    """Fait tourner un jeton d'actualisation valide et renvoie une nouvelle paire de jetons."""
     if not token:
         raise InvalidRefreshTokenError("Refresh token missing")
 
@@ -87,7 +87,7 @@ async def refresh(
     if account is None or not account.is_active:
         raise InvalidRefreshTokenError("Account not found or inactive")
 
-    # Claim the old id before issuing its replacement so it cannot be reused.
+    # Réclame l'ancien identifiant avant d'émettre son remplacement afin qu'il ne puisse être réutilisé.
     if not await revoked.revoke(jti, payload["_expires_at"]):
         raise InvalidRefreshTokenError("Refresh token has been revoked")
 
@@ -95,7 +95,7 @@ async def refresh(
 
 
 async def revoke(session: AsyncSession, token: str | None) -> None:
-    """Revoke the refresh token held in the cookie; invalid tokens are ignored."""
+    """Révoque le jeton d'actualisation contenu dans le cookie ; les jetons invalides sont ignorés."""
     if not token:
         return
 

@@ -1,4 +1,4 @@
-"""Schemas for the authenticated user's profile."""
+"""Schémas pour le profil de l'utilisateur authentifié."""
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 

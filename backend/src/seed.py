@@ -1,4 +1,4 @@
-"""Insert fake data into every table for local development."""
+"""Insère des données fictives dans toutes les tables pour le développement local."""
 
 import asyncio
 import random
@@ -20,8 +20,8 @@ from src.db.models import (
     Transaction,
 )
 
-BENEFICIARY_COUNT = 10
-CASHIER_COUNT = 4
+BENEFICIARY_COUNT = 3
+CASHIER_COUNT = 1
 ORDER_COUNT = 20
 REPORT_COUNT = 8
 
@@ -33,12 +33,12 @@ fake = Faker()
 
 
 def make_face_embedding() -> list[float]:
-    """Faker has no vector provider, so build a 512-dim embedding directly."""
+    """Faker n'a pas de fournisseur de vecteurs, donc on construit directement un plongement de 512 dimensions."""
     return [round(random.random(), 6) for _ in range(512)]
 
 
 async def seed() -> None:
-    """Populate all tables with fake but relationally consistent data."""
+    """Remplit toutes les tables avec des données fictives mais cohérentes sur le plan relationnel."""
     fake.seed_instance(42)
     random.seed(42)
 
@@ -50,7 +50,9 @@ async def seed() -> None:
                 last_name=fake.last_name(),
                 profession=fake.job(),
                 situation=random.choice(list(Situation)),
-                is_active=fake.boolean(chance_of_getting_true=90),
+                is_active=True
+                if not beneficiaries
+                else fake.boolean(chance_of_getting_true=90),
             )
             session.add(beneficiary)
             await session.flush()
@@ -62,17 +64,16 @@ async def seed() -> None:
                     embedding=make_face_embedding(),
                 )
             )
-            session.add(
-                Account(
-                    beneficiary_id=beneficiary.id,
-                    email=ADMIN_EMAIL
-                    if len(beneficiaries) == 1
-                    else fake.unique.email(),
-                    password_hash=hash_password(DEMO_PASSWORD),
-                    role=AccountType.ADMIN,
-                    is_active=True,
-                )
-            )
+
+        admin_account = Account(
+            beneficiary_id=beneficiaries[0].id,
+            email=ADMIN_EMAIL,
+            password_hash=hash_password(DEMO_PASSWORD),
+            role=AccountType.ADMIN,
+            is_active=True,
+        )
+        session.add(admin_account)
+        await session.flush()
 
         cashier_accounts: list[Account] = []
         for _ in range(CASHIER_COUNT):
@@ -87,7 +88,7 @@ async def seed() -> None:
 
             account = Account(
                 cashier_id=cashier.id,
-                email=CASHIER_EMAIL if not cashier_accounts else fake.unique.email(),
+                email=CASHIER_EMAIL,
                 password_hash=hash_password(DEMO_PASSWORD),
                 role=AccountType.CASHIER,
                 is_active=True,
@@ -126,7 +127,7 @@ async def seed() -> None:
 
         await session.commit()
 
-    accounts_count = BENEFICIARY_COUNT + CASHIER_COUNT
+    accounts_count = 1 + len(cashier_accounts)
     print(
         f"Seeded: {BENEFICIARY_COUNT} beneficiaries, "
         f"{BENEFICIARY_COUNT} face embeddings, "

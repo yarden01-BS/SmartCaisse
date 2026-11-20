@@ -1,4 +1,4 @@
-"""Database access for beneficiaries."""
+"""Accès à la base de données pour les bénéficiaires."""
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +21,7 @@ class BeneficiaryRepository(BaseRepository[Beneficiary]):
     async def list_all(
         self, sort: BeneficiarySort, is_active: bool | None
     ) -> list[Beneficiary]:
-        """List beneficiaries, optionally filtered by status and sorted by creation date."""
+        """Liste les bénéficiaires, éventuellement filtrés par statut et triés par date de création."""
         query = select(Beneficiary)
         if is_active is not None:
             query = query.where(Beneficiary.is_active == is_active)

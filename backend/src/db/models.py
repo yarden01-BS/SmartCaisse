@@ -4,23 +4,31 @@ from datetime import date, datetime
 from enum import Enum
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, MetaData, func
 from sqlalchemy import Enum as SQEnum
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+# Classe de base
+NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 
-# Base class
+
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
-# enums utils
+# Utilitaires pour les énumérations
 def enum_values(e: type[Enum]) -> list[str]:
     """Stocke la valeur ("permanent") plutôt que le nom ("PERMANENT")."""
     return [m.value for m in e]
 
 
-# Enums
+# Énumérations
 class Situation(Enum):
     PERMANENT = "permanent"
     STAGIAIRE = "stagiare"
@@ -136,7 +144,7 @@ class Account(Base):
 
 
 class RevokedToken(Base):
-    """Refresh token ids that were revoked by logout or rotation."""
+    """Identifiants des jetons d'actualisation révoqués lors de la déconnexion ou de la rotation."""
 
     __tablename__ = "revoked_tokens"
 
