@@ -123,7 +123,7 @@ Cette commande crée le schéma de base et doit être exécutée avant le premie
 uv run python -m src.seed
 ```
 
-Le script crée 10 bénéficiaires, 4 caissiers, leurs comptes, des bons de commande, des transactions et des rapports. Il **ajoute** des données : ne l'exécutez qu'une seule fois sur une base neuve, sinon les adresses e-mail uniques de démonstration provoqueront une erreur.
+Le script crée 3 bénéficiaires, 1 caissier et exactement 2 comptes : un administrateur lié au premier bénéficiaire et un caissier. Il ajoute aussi 20 bons de commande, 20 transactions et 8 rapports. Il **ajoute** des données : ne l'exécutez qu'une seule fois sur une base neuve, sinon les adresses e-mail de démonstration provoqueront une erreur.
 
 Comptes créés (mot de passe `password123`) :
 
