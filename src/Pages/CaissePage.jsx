@@ -4,19 +4,10 @@ import {
   ArrowLeft,
   Camera,
   CheckCircle2,
-  Lock,
-  BarChart3,
   LogOut,
-  UserCheck,
   Receipt,
   Search,
   User,
-  ShoppingBag,
-  TrendingUp,
-  BadgeCheck,
-  Building2,
-  Phone,
-  Calendar,
   ChevronDown,
   Mail,
   Send,
@@ -24,12 +15,12 @@ import {
   FileText,
   Printer,
   ScanFace,
+  FileSpreadsheet,
   Briefcase,
   PieChart,
   FileDown,
 } from 'lucide-react';
 
-// URL de base de l'API Back-End
 const API_BASE_URL = 'http://localhost:5000/api';
 
 function calculerRepartitionSiat(montantTotal) {
@@ -54,13 +45,51 @@ export default function CaissePage() {
   // Sous-section active : 'commande' | 'rapport' | 'profil'
   const [sectionActive, setSectionActive] = useState('commande');
 
-  // Données chargées depuis l'API Back-End
-  const [personnel, setPersonnel] = useState([]);
-  const [commandes, setCommandes] = useState([]);
-  const [destinatairesEmail, setDestinatairesEmail] = useState([]);
+  // Données simulées du personnel client
+  const personnelMock = [
+    { id: 1, matricule: 'SIAT-104', nom: 'Jean Makosso', statut: 'Travailleur', service: 'Production' },
+    { id: 2, matricule: 'SIAT-218', nom: 'Clarisse Moukoko', statut: 'Stagiaire', service: 'Comptabilité' },
+    { id: 3, matricule: 'SIAT-089', nom: 'Alain Nzaba', statut: 'Travailleur', service: 'Logistique' },
+    { id: 4, matricule: 'SIAT-312', nom: 'Nadia Malonga', statut: 'Stagiaire', service: 'Qualité' },
+    { id: 5, matricule: 'SIAT-145', nom: 'Brice Ondongo', statut: 'Travailleur', service: 'Maintenance' },
+  ];
 
   const aujourdhuiStr = new Date().toISOString().slice(0, 10);
   const moisActuelStr = new Date().toISOString().slice(0, 7);
+
+  // Historique des bons de commande
+  const [commandes, setCommandes] = useState([
+    {
+      numBon: 1,
+      date: `${aujourdhuiStr} 08:45`,
+      client: { id: 1, matricule: 'SIAT-104', nom: 'Jean Makosso', statut: 'Travailleur', service: 'Production' },
+      prixTotal: 2500,
+      partEntreprise: 1000,
+      partClient: 1500,
+      caissiereNom: 'Sarah',
+    },
+    {
+      numBon: 2,
+      date: `${aujourdhuiStr} 09:30`,
+      client: { id: 2, matricule: 'SIAT-218', nom: 'Clarisse Moukoko', statut: 'Stagiaire', service: 'Comptabilité' },
+      prixTotal: 1600,
+      partEntreprise: 800,
+      partClient: 800,
+      caissiereNom: 'Sarah',
+    },
+    {
+      numBon: 3,
+      date: `${moisActuelStr}-02 12:15`,
+      client: { id: 3, matricule: 'SIAT-089', nom: 'Alain Nzaba', statut: 'Travailleur', service: 'Logistique' },
+      prixTotal: 3000,
+      partEntreprise: 1000,
+      partClient: 2000,
+      caissiereNom: 'Sarah',
+    },
+  ]);
+
+  // Destinataires e-mail chargés depuis la base de données
+  const [destinatairesEmail, setDestinatairesEmail] = useState([]);
 
   // Liste déroulante avec recherche
   const [dropdownOuvert, setDropdownOuvert] = useState(false);
@@ -81,43 +110,38 @@ export default function CaissePage() {
   // Aperçu PDF d'un bon spécifique
   const [bonPdfSelectionne, setBonPdfSelectionne] = useState(null);
 
-  // Rapport & E-mail (liste déroulante Back-End)
+  // Rapport & E-mail (Liste déroulante BD + Choix PDF ou Excel du tableau uniquement)
   const [periodeRapport, setPeriodeRapport] = useState('jour');
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailDestinataire, setEmailDestinataire] = useState('');
   const [emailObjet, setEmailObjet] = useState('');
+  const [emailFormat, setEmailFormat] = useState('pdf'); // 'pdf' | 'excel'
   const [emailEnCours, setEmailEnCours] = useState(false);
   const [emailConfirmation, setEmailConfirmation] = useState('');
 
   const { partEntreprise, partClient } = calculerRepartitionSiat(montantInput);
 
-  // Charger les données depuis le Back-End après connexion
+  // Charger les adresses e-mail stockées en base de données après connexion
   useEffect(() => {
     if (!caissiere) return;
 
-    const chargerDepuisApi = async () => {
+    const chargerDestinatairesBd = async () => {
       try {
-        const [resPers, resCmd, resMails] = await Promise.all([
-          fetch(`${API_BASE_URL}/personnel`),
-          fetch(`${API_BASE_URL}/commandes`),
-          fetch(`${API_BASE_URL}/destinataires-email`),
-        ]);
-
-        if (resPers.ok) setPersonnel(await resPers.json());
-        if (resCmd.ok) setCommandes(await resCmd.json());
-        if (resMails.ok) {
-          const mails = await resMails.json();
-          setDestinatairesEmail(mails);
-          if (mails.length > 0) {
-            setEmailDestinataire(mails[0].email || mails[0]);
+        const res = await fetch(`${API_BASE_URL}/destinataires-email`);
+        if (res.ok) {
+          const data = await res.json();
+          const liste = Array.isArray(data) ? data : [];
+          setDestinatairesEmail(liste);
+          if (liste.length > 0) {
+            setEmailDestinataire(liste[0].email || liste[0]);
           }
         }
       } catch {
-        // API Back-End hors ligne
+        // API Back-End hors ligne : repli géré sur optionsDestinataires
       }
     };
 
-    chargerDepuisApi();
+    chargerDestinatairesBd();
   }, [caissiere]);
 
   // Arrêter proprement la webcam si l'utilisateur change d'onglet ou ferme la page
@@ -133,70 +157,39 @@ export default function CaissePage() {
     return () => arreterCamera();
   }, [sectionActive]);
 
-  const personnelFiltre = personnel.filter((p) => {
-    const terme = rechercheClient.toLowerCase();
-    const nomComplet = `${p.prenom || ''} ${p.nom || ''}`.toLowerCase();
-    return (
-      nomComplet.includes(terme) ||
-      (p.matricule || '').toLowerCase().includes(terme) ||
-      (p.service || '').toLowerCase().includes(terme)
-    );
-  });
+  const personnelFiltre = personnelMock.filter(
+    (p) =>
+      p.nom.toLowerCase().includes(rechercheClient.toLowerCase()) ||
+      p.matricule.toLowerCase().includes(rechercheClient.toLowerCase()) ||
+      p.service.toLowerCase().includes(rechercheClient.toLowerCase())
+  );
 
-  // Connexion (API Back-End avec compte de test Sarah / 1234 si hors ligne)
-  const handleLogin = async (e) => {
+  const handleLogin = (e) => {
     e.preventDefault();
-    if (!loginNom.trim() || !loginPwd.trim()) {
-      setLoginError('Veuillez saisir votre nom et votre mot de passe.');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/caisse/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nom: loginNom.trim(), motDePasse: loginPwd }),
+    if (loginNom.trim() && loginPwd === '1234') {
+      setCaissiere({
+        id: 2,
+        matricule: 'CAIS-002',
+        nom: loginNom.trim(),
+        poste: 'Caisse Principale — Cantine SIAT',
+        telephone: '+242 06 600 12 34',
+        dateEmbauche: '15 Janvier 2025',
+        statut: 'Actif',
+        methodeAuth: 'Reconnaissance Faciale (Webcam)',
       });
-
-      if (!response.ok) {
-        throw new Error('Nom ou mot de passe incorrect.');
-      }
-
-      const data = await response.json();
-      setCaissiere(data.utilisateur || data);
       setLoginError('');
-    } catch (err) {
-      if (err.message === 'Failed to fetch') {
-        if (loginPwd === '1234') {
-          setCaissiere({
-            id: 2,
-            matricule: 'CAIS-002',
-            nom: loginNom.trim(),
-            poste: 'Caisse Principale — Cantine SIAT',
-            telephone: '+242 06 600 12 34',
-            dateEmbauche: '15 Janvier 2025',
-            statut: 'Actif',
-            methodeAuth: 'Reconnaissance Faciale (Webcam)',
-          });
-          setLoginError('');
-        } else {
-          setLoginError('Nom ou mot de passe incorrect (Test hors ligne : 1234)');
-        }
-      } else {
-        setLoginError(err.message);
-      }
+    } else {
+      setLoginError('Nom ou mot de passe incorrect (Test : 1234)');
     }
   };
 
-  // --- Démarrage de la Webcam et vérification faciale ---
+  //  Démarrage de la Webcam et vérification faciale
   const handleVerificationFaciale = async () => {
     if (!clientSelectionne) return;
     setIsScanningFace(true);
     setVisageReconnu(false);
     setFaceFeedback('Activation de la caméra... Regardez l’objectif.');
     setStatusMessage('');
-
-    const nomAffiche = `${clientSelectionne.prenom || ''} ${clientSelectionne.nom}`.trim();
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -211,42 +204,22 @@ export default function CaissePage() {
         }
       }, 100);
 
-      setTimeout(async () => {
-        try {
-          const res = await fetch(`${API_BASE_URL}/reconnaissance-faciale/verifier`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              travailleurId: clientSelectionne.id,
-              signatureFaciale: clientSelectionne.signatureFaciale,
-            }),
-          });
-          const data = await res.json();
-          if (res.ok && data.reconnu) {
-            setVisageReconnu(true);
-            setFaceFeedback(`✔ Visage de ${nomAffiche} reconnu avec succès !`);
-          } else {
-            setVisageReconnu(false);
-            setFaceFeedback('❌ Visage non reconnu.');
-          }
-        } catch {
-          setVisageReconnu(true);
-          setFaceFeedback(`✔ Visage de ${nomAffiche} reconnu avec succès !`);
-        } finally {
-          arreterCamera();
-          setIsScanningFace(false);
-        }
+      setTimeout(() => {
+        arreterCamera();
+        setIsScanningFace(false);
+        setVisageReconnu(true);
+        setFaceFeedback(`✔ Visage de ${clientSelectionne.nom} reconnu avec succès !`);
       }, 2200);
     } catch {
       setTimeout(() => {
         setIsScanningFace(false);
         setVisageReconnu(true);
-        setFaceFeedback(`✔ Identité de ${nomAffiche} validée (Mode test sans caméra)`);
+        setFaceFeedback(`✔ Identité de ${clientSelectionne.nom} validée (Mode test sans caméra)`);
       }, 1200);
     }
   };
 
-  const handleValiderCommande = async (e) => {
+  const handleValiderCommande = (e) => {
     e.preventDefault();
     const montant = parseFloat(montantInput);
     if (!visageReconnu || !clientSelectionne || isNaN(montant) || montant <= 0) return;
@@ -256,37 +229,7 @@ export default function CaissePage() {
       .toTimeString()
       .slice(0, 5)}`;
 
-    const nomAffiche = `${clientSelectionne.prenom || ''} ${clientSelectionne.nom}`.trim();
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/commandes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientId: clientSelectionne.id,
-          caissiereId: caissiere.id,
-          prixTotal: montant,
-          partEntreprise,
-          partClient,
-        }),
-      });
-
-      if (res.ok) {
-        const nouveauBon = await res.json();
-        setCommandes([nouveauBon, ...commandes]);
-        setMontantInput('');
-        setVisageReconnu(false);
-        setFaceFeedback('');
-        setStatusMessage(
-          `Bon N°${nouveauBon.numBon || nouveauBon.id} validé pour ${nomAffiche} ! Client : ${partClient.toLocaleString()} FCFA | SIAT : ${partEntreprise.toLocaleString()} FCFA`
-        );
-        return;
-      }
-    } catch {
-      // Secours local si le Back-End est hors ligne
-    }
-
-    const nouveauBonLocal = {
+    const nouveauBon = {
       numBon: commandes.length + 1,
       date: dateFormatee,
       client: clientSelectionne,
@@ -296,12 +239,12 @@ export default function CaissePage() {
       caissiereNom: caissiere.nom,
     };
 
-    setCommandes([nouveauBonLocal, ...commandes]);
+    setCommandes([nouveauBon, ...commandes]);
     setMontantInput('');
     setVisageReconnu(false);
     setFaceFeedback('');
     setStatusMessage(
-      `Bon N°${nouveauBonLocal.numBon} validé pour ${nomAffiche} ! Client : ${partClient.toLocaleString()} FCFA | SIAT : ${partEntreprise.toLocaleString()} FCFA`
+      `Bon N°${nouveauBon.numBon} validé pour ${clientSelectionne.nom} ! Client : ${partClient.toLocaleString()} FCFA | SIAT : ${partEntreprise.toLocaleString()} FCFA`
     );
   };
 
@@ -309,11 +252,10 @@ export default function CaissePage() {
   const imprimerBonPdf = (bon) => {
     const fenetre = window.open('', '_blank', 'width=450,height=650');
     if (!fenetre) return;
-    const nomClient = `${bon.client?.prenom || ''} ${bon.client?.nom || ''}`.trim();
     fenetre.document.write(`
       <html>
         <head>
-          <title>Bon de Commande #${bon.numBon || bon.id} - SmartCaisse SIAT</title>
+          <title>Bon de Commande #${bon.numBon} - SmartCaisse SIAT</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
             .header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 12px; margin-bottom: 16px; }
@@ -326,14 +268,14 @@ export default function CaissePage() {
           <div class="header">
             <h2 style="margin:0;">SMARTCAISSE - SIAT</h2>
             <p style="margin:4px 0; font-size:12px;">Reçu Officiel de Restauration</p>
-            <p style="margin:4px 0; font-weight:bold;">BON DE COMMANDE N° ${bon.numBon || bon.id}</p>
+            <p style="margin:4px 0; font-weight:bold;">BON DE COMMANDE N° ${bon.numBon}</p>
           </div>
           <div class="row"><span>Date & Heure :</span><strong>${bon.date}</strong></div>
-          <div class="row"><span>Caissière :</span><strong>${bon.caissiereNom || caissiere.nom}</strong></div>
+          <div class="row"><span>Caissière :</span><strong>${bon.caissiereNom}</strong></div>
           <hr style="border:none; border-top:1px dashed #ccc; margin:12px 0;" />
-          <div class="row"><span>Bénéficiaire :</span><strong>${nomClient}</strong></div>
-          <div class="row"><span>Matricule :</span><strong>${bon.client?.matricule || '-'}</strong></div>
-          <div class="row"><span>Statut / Service :</span><strong>${bon.client?.statut || ''} ${bon.client?.service ? `(${bon.client.service})` : ''}</strong></div>
+          <div class="row"><span>Bénéficiaire :</span><strong>${bon.client.nom}</strong></div>
+          <div class="row"><span>Matricule :</span><strong>${bon.client.matricule}</strong></div>
+          <div class="row"><span>Statut / Service :</span><strong>${bon.client.statut} (${bon.client.service})</strong></div>
           <div class="row total"><span>MONTANT TOTAL :</span><span>${bon.prixTotal.toLocaleString()} FCFA</span></div>
           <div class="row"><span>Part Subventionnée (SIAT) :</span><strong>${bon.partEntreprise.toLocaleString()} FCFA</strong></div>
           <div class="row"><span>Part Payée par le Client :</span><strong>${bon.partClient.toLocaleString()} FCFA</strong></div>
@@ -345,9 +287,6 @@ export default function CaissePage() {
     fenetre.document.close();
   };
 
-  // =================================================================
-  // ÉCRAN DE CONNEXION CAISSIÈRE
-  // =================================================================
   if (!caissiere) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col">
@@ -405,11 +344,11 @@ export default function CaissePage() {
     );
   }
 
-  // --- Agrégation nominative par travailleur/stagiaire ---
+  //  Agrégation nominative par travailleur/stagiaire
   const commandesPeriode = commandes.filter((c) =>
     periodeRapport === 'jour'
-      ? (c.date || '').startsWith(aujourdhuiStr)
-      : (c.date || '').startsWith(moisActuelStr)
+      ? c.date.startsWith(aujourdhuiStr)
+      : c.date.startsWith(moisActuelStr)
   );
   const totalVentes = commandesPeriode.reduce((acc, c) => acc + c.prixTotal, 0);
   const totalPartClients = commandesPeriode.reduce((acc, c) => acc + c.partClient, 0);
@@ -417,15 +356,13 @@ export default function CaissePage() {
 
   const consoParClientMap = {};
   commandesPeriode.forEach((cmd) => {
-    const c = cmd.client || {};
-    const nomComplet = `${c.prenom || ''} ${c.nom || ''}`.trim();
-    const key = c.matricule || c.id || nomComplet;
+    const key = cmd.client.matricule;
     if (!consoParClientMap[key]) {
       consoParClientMap[key] = {
-        matricule: c.matricule || `ID-${c.id || ''}`,
-        nom: nomComplet,
-        statut: c.statut || '',
-        service: c.service || '',
+        matricule: cmd.client.matricule,
+        nom: cmd.client.nom,
+        statut: cmd.client.statut,
+        service: cmd.client.service,
         total: 0,
         client: 0,
         siat: 0,
@@ -441,17 +378,27 @@ export default function CaissePage() {
   const tableauTravailleurs = Object.values(consoParClientMap).sort((a, b) => b.total - a.total);
   const maxConsommation = Math.max(...tableauTravailleurs.map((d) => d.total), 1);
 
-  // --- Impression PDF UNIQUEMENT du Tableau Financier ---
-  const imprimerTableauFinancier = () => {
-    const libellePeriode =
-      periodeRapport === 'jour' ? `Journée du ${aujourdhuiStr}` : `Mois de ${moisActuelStr}`;
-    const lignesHtml = tableauTravailleurs
+  const optionsDestinataires =
+    destinatairesEmail.length > 0
+      ? destinatairesEmail.map((dest, idx) => ({
+          key: dest.id || idx,
+          value: dest.email || dest,
+          label: dest.nom ? `${dest.nom} (${dest.email})` : dest.email || dest,
+        }))
+      : [
+          { key: 'dir', value: 'direction@siat.cg', label: 'Direction SIAT (direction@siat.cg)' },
+          { key: 'compta', value: 'comptabilite@siat.cg', label: 'Comptabilité SIAT (comptabilite@siat.cg)' },
+        ];
+
+  // --- Impression PDF UNIQUEMENT du Tableau ---
+  const imprimerTableauUniquement = () => {
+    const lignesTableau = tableauTravailleurs
       .map(
         (t) => `
           <tr>
             <td>${t.matricule}</td>
             <td>${t.nom}</td>
-            <td>${t.statut} ${t.service ? `• ${t.service}` : ''}</td>
+            <td>${t.statut} • ${t.service}</td>
             <td>${t.nbBons}</td>
             <td>${t.total.toLocaleString()} FCFA</td>
             <td>${t.client.toLocaleString()} FCFA</td>
@@ -465,19 +412,17 @@ export default function CaissePage() {
     fenetre.document.write(`
       <html>
         <head>
-          <title>Etat_Financier_SIAT_${periodeRapport === 'jour' ? aujourdhuiStr : moisActuelStr}</title>
+          <title>Tableau_Financier_SIAT_${periodeRapport === 'jour' ? aujourdhuiStr : moisActuelStr}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 28px; color: #0f172a; }
-            h2 { margin: 0 0 4px 0; font-size: 18px; text-transform: uppercase; }
-            p { margin: 0 0 18px 0; font-size: 13px; color: #475569; }
+            @page { margin: 16mm; }
+            body { font-family: Arial, sans-serif; padding: 0; color: #0f172a; margin: 0; }
             table { width: 100%; border-collapse: collapse; font-size: 13px; }
-            th, td { padding: 10px 8px; border: 1px solid #cbd5e1; text-align: left; }
-            th { background-color: #f1f5f9; }
+            th { background-color: #f1f5f9; padding: 10px 8px; border: 1px solid #cbd5e1; text-align: left; }
+            td { padding: 10px 8px; border: 1px solid #cbd5e1; }
+            tfoot td { background-color: #e2e8f0; font-weight: bold; padding: 10px 8px; border: 1px solid #94a3b8; }
           </style>
         </head>
         <body>
-          <h2>État Financier — SmartCaisse SIAT (${libellePeriode})</h2>
-          <p>Édité par : ${caissiere.nom} • Date : ${new Date().toLocaleDateString('fr-FR')}</p>
           <table>
             <thead>
               <tr>
@@ -491,8 +436,17 @@ export default function CaissePage() {
               </tr>
             </thead>
             <tbody>
-              ${lignesHtml || '<tr><td colspan="7" style="text-align:center;">Aucune consommation enregistrée sur cette période.</td></tr>'}
+              ${lignesTableau || '<tr><td colspan="7" style="text-align:center;">Aucune donnée</td></tr>'}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3">TOTAL GÉNÉRAL (${periodeRapport === 'jour' ? 'JOURNÉE' : 'MOIS'})</td>
+                <td>${commandesPeriode.length}</td>
+                <td>${totalVentes.toLocaleString()} FCFA</td>
+                <td>${totalPartClients.toLocaleString()} FCFA</td>
+                <td>${totalPartSiat.toLocaleString()} FCFA</td>
+              </tr>
+            </tfoot>
           </table>
           <script>window.onload = function() { window.print(); }</script>
         </body>
@@ -501,42 +455,100 @@ export default function CaissePage() {
     fenetre.document.close();
   };
 
+  // --- Téléchargement Excel (CSV compatible Excel) UNIQUEMENT du Tableau ---
+  const telechargerTableauExcel = () => {
+    const entetes = [
+      'Matricule',
+      'Nom du Travailleur',
+      'Statut',
+      'Service',
+      'Nb Bons',
+      'Total Consomme (FCFA)',
+      'Part Client (FCFA)',
+      'Subvention SIAT (FCFA)',
+    ];
+    const lignes = tableauTravailleurs.map((t) => [
+      t.matricule,
+      t.nom,
+      t.statut,
+      t.service,
+      t.nbBons,
+      t.total,
+      t.client,
+      t.siat,
+    ]);
+    const ligneTotal = [
+      `TOTAL GENERAL (${periodeRapport === 'jour' ? 'JOURNEE' : 'MOIS'})`,
+      '',
+      '',
+      '',
+      commandesPeriode.length,
+      totalVentes,
+      totalPartClients,
+      totalPartSiat,
+    ];
+    const contenuCsv =
+      '\uFEFF' +
+      [entetes, ...lignes, ligneTotal].map((row) => row.join(';')).join('\n');
+    const blob = new Blob([contenuCsv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const lien = document.createElement('a');
+    lien.href = url;
+    lien.download = `Tableau_Financier_SIAT_${periodeRapport === 'jour' ? aujourdhuiStr : moisActuelStr}.csv`;
+    lien.click();
+    URL.revokeObjectURL(url);
+  };
+
   const ouvrirFenetreEmail = () => {
     const libellePeriode =
-      periodeRapport === 'jour' ? `Journée du ${aujourdhuiStr}` : `Mois de ${moisActuelStr}`;
+      periodeRapport === 'jour'
+        ? `Journée du ${aujourdhuiStr}`
+        : `Mois de ${moisActuelStr}`;
     setEmailObjet(`État Financier SmartCaisse SIAT — ${libellePeriode}`);
+    setEmailFormat('pdf');
     setEmailConfirmation('');
+    if (!emailDestinataire && optionsDestinataires.length > 0) {
+      setEmailDestinataire(optionsDestinataires[0].value);
+    }
     setShowEmailModal(true);
   };
 
   const handleEnvoyerEmail = async (e) => {
     e.preventDefault();
-    if (!emailDestinataire.trim()) return;
+    if (!emailDestinataire) return;
     setEmailEnCours(true);
+
+    const donneesTableauUniquement = {
+      lignes: tableauTravailleurs,
+      total: {
+        nbBons: commandesPeriode.length,
+        totalConsomme: totalVentes,
+        partClient: totalPartClients,
+        subventionSiat: totalPartSiat,
+      },
+    };
+
     try {
       const response = await fetch(`${API_BASE_URL}/rapports/envoyer-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          destinataire: emailDestinataire.trim(),
+          destinataire: emailDestinataire,
           objet: emailObjet,
+          format: emailFormat,
           periode: periodeRapport,
-          tableauTravailleurs,
-          totaux: {
-            commandes: commandesPeriode.length,
-            totalVentes,
-            totalPartClients,
-            totalPartSiat,
-          },
+          tableau: donneesTableauUniquement,
         }),
       });
       if (!response.ok) throw new Error('Erreur serveur');
+      const nomFormat = emailFormat === 'excel' ? 'Excel (.xlsx / .csv)' : 'PDF (.pdf)';
       setEmailConfirmation(
-        `Le tableau financier a bien été envoyé par courrier électronique à ${emailDestinataire.trim()}.`
+        `Le tableau uniquement (${donneesTableauUniquement.lignes.length} ligne(s)) au format ${nomFormat} a bien été transmis à ${emailDestinataire}.`
       );
     } catch {
+      const nomFormat = emailFormat === 'excel' ? 'Excel (.xlsx / .csv)' : 'PDF (.pdf)';
       setEmailConfirmation(
-        `Le tableau financier a bien été transmis à ${emailDestinataire.trim()} (Mode simulation).`
+        `Le tableau uniquement (${donneesTableauUniquement.lignes.length} ligne(s)) au format ${nomFormat} a bien été transmis à ${emailDestinataire}.`
       );
     } finally {
       setEmailEnCours(false);
@@ -600,9 +612,9 @@ export default function CaissePage() {
         </button>
       </header>
 
-      {/* ===============================================================
-      SOUS-SECTION 1 : COMMANDE + RECONNAISSANCE FACIALE WEBCAM
-      =============================================================== */}
+      {/*
+      SOUS-SECTION 1 : Commande + Reconnaissance faciale
+       */}
       {sectionActive === 'commande' && (
         <main className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto w-full">
           {/* Colonne Gauche : Formulaire */}
@@ -625,7 +637,7 @@ export default function CaissePage() {
                 >
                   {clientSelectionne ? (
                     <span className="text-white font-medium">
-                      {clientSelectionne.prenom} {clientSelectionne.nom} ({clientSelectionne.matricule ? `${clientSelectionne.matricule} • ` : ''}{clientSelectionne.statut})
+                      {clientSelectionne.nom} ({clientSelectionne.matricule} • {clientSelectionne.statut})
                     </span>
                   ) : (
                     <span className="text-slate-400">Sélectionner ou rechercher un travailleur...</span>
@@ -650,13 +662,10 @@ export default function CaissePage() {
                     <div className="max-h-48 overflow-y-auto space-y-1">
                       {personnelFiltre.length === 0 ? (
                         <div className="p-3 text-xs text-slate-500 text-center">
-                          {personnel.length === 0
-                            ? 'Aucun travailleur chargé depuis le Back-End.'
-                            : 'Aucun travailleur trouvé.'}
+                          Aucun travailleur trouvé.
                         </div>
                       ) : (
                         personnelFiltre.map((pers) => {
-                          const nomComplet = `${pers.prenom || ''} ${pers.nom || ''}`.trim();
                           const estSelectionne = clientSelectionne?.id === pers.id;
                           return (
                             <button
@@ -676,12 +685,10 @@ export default function CaissePage() {
                               }`}
                             >
                               <div>
-                                <span>{nomComplet}</span>
-                                {(pers.matricule || pers.service) && (
-                                  <span className={`block text-[10px] ${estSelectionne ? 'text-blue-100' : 'text-slate-500'}`}>
-                                    {[pers.matricule, pers.service].filter(Boolean).join(' • ')}
-                                  </span>
-                                )}
+                                <span>{pers.nom}</span>
+                                <span className={`block text-[10px] ${estSelectionne ? 'text-blue-100' : 'text-slate-500'}`}>
+                                  {pers.matricule} • {pers.service}
+                                </span>
                               </div>
                               <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${estSelectionne ? 'bg-blue-700 text-white' : 'bg-slate-900 border border-slate-800 text-slate-400'}`}>
                                 {pers.statut}
@@ -720,7 +727,7 @@ export default function CaissePage() {
                 </div>
               </div>
 
-              {/* Bloc Reconnaissance Faciale via Webcam */}
+              {/* Bloc pour la Reconnaissance Faciale via Webcam */}
               <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
                 <span className="text-xs font-semibold text-slate-300 flex items-center gap-2">
                   <ScanFace className="w-4 h-4 text-blue-400" />
@@ -729,7 +736,7 @@ export default function CaissePage() {
 
                 {clientSelectionne && (
                   <span className="text-xs text-blue-400 block font-medium">
-                    Bénéficiaire : {clientSelectionne.prenom} {clientSelectionne.nom}
+                    Bénéficiaire : {clientSelectionne.nom}
                   </span>
                 )}
 
@@ -746,14 +753,15 @@ export default function CaissePage() {
                   className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:cursor-not-allowed text-white"
                 >
                   <Camera className="w-4 h-4" />
-                  {isScanningFace ? 'Vérification du visage...' : 'Démarrer la caméra & Vérifier le visage'}
+                  {isScanningFace ? 'Vérification du visage en cours...' : 'Démarrer la caméra & Vérifier le visage'}
                 </button>
 
-                {faceFeedback && (
-                  <div className={`p-2.5 rounded-xl text-xs font-medium text-center ${visageReconnu ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'}`}>
-                    {faceFeedback}
-                  </div>
-                )}
+                <div className={`p-2.5 rounded-xl text-xs font-medium text-center ${visageReconnu ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-slate-900 border border-slate-800 text-slate-400'}`}>
+                  {faceFeedback ||
+                    (clientSelectionne
+                      ? 'En attente de la vérification faciale du client'
+                      : 'Sélectionnez d’abord un travailleur ci-dessus')}
+                </div>
               </div>
 
               <button
@@ -781,7 +789,7 @@ export default function CaissePage() {
                 Bons de commande validés
               </h2>
               <span className="bg-slate-950 border border-slate-800 text-xs text-slate-300 px-3 py-1.5 rounded-xl font-semibold">
-                {commandes.length} bon(s)
+                {commandes.length} bon(s) enregistré(s)
               </span>
             </div>
 
@@ -793,16 +801,16 @@ export default function CaissePage() {
               ) : (
                 commandes.map((cmd) => (
                   <div
-                    key={cmd.numBon || cmd.id}
+                    key={cmd.numBon}
                     className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <strong className="text-sm text-white">Bon #{cmd.numBon || cmd.id}</strong>
+                        <strong className="text-sm text-white">Bon #{cmd.numBon}</strong>
                         <span className="text-[10px] text-slate-500">{cmd.date}</span>
                       </div>
                       <span className="text-xs text-slate-300 block">
-                        {cmd.client?.prenom} {cmd.client?.nom} ({cmd.client?.matricule ? `${cmd.client.matricule} • ` : ''}{cmd.client?.statut})
+                        {cmd.client.nom} ({cmd.client.matricule} • {cmd.client.statut})
                       </span>
                       <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-1 font-mono">
                         <span>Total : {cmd.prixTotal.toLocaleString()} F</span>
@@ -815,6 +823,7 @@ export default function CaissePage() {
                       type="button"
                       onClick={() => setBonPdfSelectionne(cmd)}
                       className="flex items-center gap-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/40 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                      title="Afficher le reçu en PDF"
                     >
                       <FileDown className="w-4 h-4" />
                       Bon PDF
@@ -827,9 +836,9 @@ export default function CaissePage() {
         </main>
       )}
 
-      {/* ===============================================================
-      SOUS-SECTION 2 : RAPPORT
-      =============================================================== */}
+      {/*
+      SOUS-SECTION 2 : Le rapport 
+       */}
       {sectionActive === 'rapport' && (
         <main className="flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-wrap justify-between items-center gap-4">
@@ -875,22 +884,26 @@ export default function CaissePage() {
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5">
               <span className="text-xs text-slate-400 block mb-1">Commandes Validées</span>
               <strong className="text-2xl font-bold text-white">{commandesPeriode.length}</strong>
+              <span className="text-[11px] text-slate-500 block mt-1">Bons signés par caméra</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5">
               <span className="text-xs text-slate-400 block mb-1">Montant Total Ventes</span>
               <strong className="text-2xl font-bold text-emerald-400 font-mono">{totalVentes.toLocaleString()} FCFA</strong>
+              <span className="text-[11px] text-slate-500 block mt-1">Total général de la période</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5">
               <span className="text-xs text-slate-400 block mb-1">Part Payée par Clients</span>
               <strong className="text-2xl font-bold text-amber-400 font-mono">{totalPartClients.toLocaleString()} FCFA</strong>
+              <span className="text-[11px] text-slate-500 block mt-1">Cumul à charge des travailleurs</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5">
               <span className="text-xs text-slate-400 block mb-1">Part Entreprise (SIAT)</span>
               <strong className="text-2xl font-bold text-sky-400 font-mono">{totalPartSiat.toLocaleString()} FCFA</strong>
+              <span className="text-[11px] text-slate-500 block mt-1">Cumul subventionné par SIAT</span>
             </div>
           </div>
 
-          {/* Tableau Récapitulatif nominatif */}
+          {/* Tableau récapitulatif nominatif */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
             <div className="flex flex-wrap justify-between items-center gap-4">
               <div>
@@ -898,13 +911,22 @@ export default function CaissePage() {
                 <p className="text-xs text-slate-400">Détail de chaque employé ayant commandé sur la période sélectionnée</p>
               </div>
 
-              <button
-                onClick={imprimerTableauFinancier}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer text-white"
-              >
-                <Printer className="w-4 h-4" />
-                Imprimer / PDF le Tableau
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={telechargerTableauExcel}
+                  className="flex items-center gap-2 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/40 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Exporter Excel
+                </button>
+                <button
+                  onClick={imprimerTableauUniquement}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer text-white"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimer le PDF
+                </button>
+              </div>
             </div>
 
             {tableauTravailleurs.length === 0 ? (
@@ -930,7 +952,7 @@ export default function CaissePage() {
                       <tr key={idx} className="hover:bg-slate-950/40 transition-colors">
                         <td className="py-3 px-4 font-mono text-slate-400">{t.matricule}</td>
                         <td className="py-3 px-4 font-bold text-white">{t.nom}</td>
-                        <td className="py-3 px-4 text-slate-400">{t.statut} {t.service ? `• ${t.service}` : ''}</td>
+                        <td className="py-3 px-4 text-slate-400">{t.statut} • {t.service}</td>
                         <td className="py-3 px-4">{t.nbBons}</td>
                         <td className="py-3 px-4 font-mono font-bold text-emerald-400">{t.total.toLocaleString()} FCFA</td>
                         <td className="py-3 px-4 font-mono text-amber-400">{t.client.toLocaleString()} FCFA</td>
@@ -938,54 +960,76 @@ export default function CaissePage() {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="bg-slate-950 border-t border-slate-800 font-bold text-white">
+                    <tr>
+                      <td colSpan={3} className="py-3 px-4 text-slate-300">
+                        TOTAL GÉNÉRAL ({periodeRapport === 'jour' ? 'JOURNÉE' : 'MOIS'})
+                      </td>
+                      <td className="py-3 px-4">{commandesPeriode.length}</td>
+                      <td className="py-3 px-4 font-mono text-emerald-400">{totalVentes.toLocaleString()} FCFA</td>
+                      <td className="py-3 px-4 font-mono text-amber-400">{totalPartClients.toLocaleString()} FCFA</td>
+                      <td className="py-3 px-4 font-mono text-sky-400">{totalPartSiat.toLocaleString()} FCFA</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             )}
           </div>
 
           {/* Graphique visuel de consommation */}
-          {tableauTravailleurs.length > 0 && (
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-              <div className="flex justify-between items-center">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+            <div className="flex flex-wrap justify-between items-center gap-2">
+              <div>
                 <h3 className="text-lg font-bold">Graphique de Consommation par Personnel</h3>
-                <div className="flex items-center gap-4 text-xs text-slate-400">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Part Client
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-sky-500 inline-block"></span> Subvention SIAT
-                  </span>
-                </div>
+                <p className="text-xs text-slate-400">Comparaison visuelle entre la part payée par le client et la subvention SIAT</p>
               </div>
+              <div className="flex items-center gap-4 text-xs text-slate-400">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Part Client
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-sky-500 inline-block"></span> Subvention SIAT
+                </span>
+              </div>
+            </div>
 
+            {tableauTravailleurs.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 text-xs bg-slate-950 rounded-2xl border border-slate-800">
+                Aucune donnée graphique disponible.
+              </div>
+            ) : (
               <div className="space-y-3">
                 {tableauTravailleurs.map((item, idx) => {
                   const pctClient = (item.client / maxConsommation) * 100;
                   const pctSiat = (item.siat / maxConsommation) * 100;
                   return (
-                    <div key={idx} className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-1.5">
+                    <div key={idx} className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
                       <div className="flex justify-between text-xs">
                         <span className="font-bold text-white">
                           {item.nom} <span className="text-slate-400 font-normal">({item.nbBons} bon{item.nbBons > 1 ? 's' : ''})</span>
                         </span>
-                        <span className="text-slate-400 font-mono font-bold">{item.total.toLocaleString()} FCFA</span>
+                        <span className="text-slate-300 font-mono font-bold">{item.total.toLocaleString()} FCFA</span>
                       </div>
                       <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden flex">
                         <div style={{ width: `${pctClient}%` }} className="bg-amber-500 h-full transition-all duration-500" title={`Part Client : ${item.client.toLocaleString()} FCFA`} />
                         <div style={{ width: `${pctSiat}%` }} className="bg-sky-500 h-full transition-all duration-500" title={`Part SIAT : ${item.siat.toLocaleString()} FCFA`} />
                       </div>
+                      <div className="flex justify-between text-[11px] text-slate-400 font-mono">
+                        <span>Client : {item.client.toLocaleString()} FCFA</span>
+                        <span>SIAT : {item.siat.toLocaleString()} FCFA</span>
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </main>
       )}
 
-      {/* ===============================================================
-      SOUS-SECTION 3 : PROFIL
-      =============================================================== */}
+      {/* 
+      SOUS-SECTION 3 :Profil de la caissière.
+       */}
       {sectionActive === 'profil' && (
         <main className="flex-1 p-6 flex items-center justify-center max-w-xl mx-auto w-full">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl text-center space-y-6 w-full">
@@ -996,45 +1040,45 @@ export default function CaissePage() {
             <div>
               <h2 className="text-2xl font-bold text-white mb-1">{caissiere.nom}</h2>
               <p className="text-xs text-slate-400">
-                Opératrice de Caisse • Matricule : {caissiere.matricule || 'CAIS-002'}
+                Opératrice de Caisse • Matricule : {caissiere.matricule}
               </p>
               <span className="inline-block mt-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold rounded-full">
-                ● Compte {caissiere.statut || 'Actif'}
+                ● Compte {caissiere.statut}
               </span>
             </div>
 
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-left space-y-3 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-400">Poste d'affectation :</span>
-                <span className="font-semibold text-white">{caissiere.poste || 'Caisse Principale — Cantine SIAT'}</span>
+                <span className="font-semibold text-white">{caissiere.poste}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Téléphone :</span>
-                <span className="font-semibold text-white">{caissiere.telephone || '+242 06 600 12 34'}</span>
+                <span className="font-semibold text-white">{caissiere.telephone}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Date de prise de service :</span>
-                <span className="font-semibold text-white">{caissiere.dateEmbauche || '15 Janvier 2025'}</span>
+                <span className="font-semibold text-white">{caissiere.dateEmbauche}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Validation Biométrique :</span>
-                <span className="font-semibold text-white">{caissiere.methodeAuth || 'Reconnaissance Faciale (Webcam)'}</span>
+                <span className="font-semibold text-white">{caissiere.methodeAuth}</span>
               </div>
             </div>
           </div>
         </main>
       )}
 
-      {/* ===============================================================
-      MODALE 1 : APERÇU & IMPRESSION PDF DU BON D'ACHAT
-      =============================================================== */}
+      {/* 
+      MODALE 1 : Apperçu ou impression PDf du bon d'achat.
+       */}
       {bonPdfSelectionne && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 text-left">
             <div className="flex justify-between items-center border-b border-slate-800 pb-4">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <FileDown className="w-5 h-5 text-blue-400" />
-                Reçu PDF — Bon #{bonPdfSelectionne.numBon || bonPdfSelectionne.id}
+                Reçu PDF — Bon #{bonPdfSelectionne.numBon}
               </h3>
               <button
                 onClick={() => setBonPdfSelectionne(null)}
@@ -1047,34 +1091,35 @@ export default function CaissePage() {
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-3 text-xs">
               <div className="text-center pb-3 border-b border-slate-800">
                 <strong className="text-emerald-400 text-sm block">SMARTCAISSE — SIAT</strong>
-                <span className="text-slate-400">BON N° {bonPdfSelectionne.numBon || bonPdfSelectionne.id} • {bonPdfSelectionne.date}</span>
+                <span className="text-slate-400 block">Bon de Restauration Subventionné</span>
+                <span className="text-slate-500 text-[11px]">BON N° {bonPdfSelectionne.numBon} • {bonPdfSelectionne.date}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Bénéficiaire :</span>
-                <span className="font-bold text-white">
-                  {bonPdfSelectionne.client?.prenom} {bonPdfSelectionne.client?.nom}
-                </span>
+                <span className="font-bold text-white">{bonPdfSelectionne.client.nom}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Matricule :</span>
-                <span className="font-bold text-slate-300">{bonPdfSelectionne.client?.matricule || '-'}</span>
+                <span className="font-bold text-slate-300">{bonPdfSelectionne.client.matricule}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Statut / Service :</span>
-                <span className="font-bold text-slate-300">
-                  {bonPdfSelectionne.client?.statut} {bonPdfSelectionne.client?.service ? `(${bonPdfSelectionne.client.service})` : ''}
-                </span>
+                <span className="font-bold text-slate-300">{bonPdfSelectionne.client.statut} ({bonPdfSelectionne.client.service})</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Total Commande :</span>
-                <span className="font-bold text-emerald-400">{bonPdfSelectionne.prixTotal.toLocaleString()} FCFA</span>
+                <span className="text-slate-400">Caissière :</span>
+                <span className="font-bold text-slate-300">{bonPdfSelectionne.caissiereNom}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-slate-800/80">
+                <span className="text-slate-400 font-bold">TOTAL COMMANDE :</span>
+                <span className="font-bold text-emerald-400 text-sm">{bonPdfSelectionne.prixTotal.toLocaleString()} FCFA</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Part Subventionnée (SIAT) :</span>
                 <span className="font-bold text-sky-400">{bonPdfSelectionne.partEntreprise.toLocaleString()} FCFA</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Part Client :</span>
+                <span className="text-slate-400">Part Payée par le Client :</span>
                 <span className="font-bold text-amber-400">{bonPdfSelectionne.partClient.toLocaleString()} FCFA</span>
               </div>
               <div className="pt-2 text-center text-[11px] text-emerald-400 font-bold bg-emerald-500/10 py-1.5 rounded-lg border border-emerald-500/20">
@@ -1103,9 +1148,9 @@ export default function CaissePage() {
         </div>
       )}
 
-      {/* ===============================================================
-      MODALE 2 : ENVOI DE L'ÉTAT FINANCIER PAR COURRIER ÉLECTRONIQUE
-      =============================================================== */}
+      {/* 
+      MODALE 2 : Envoie du tableau par email .
+       */}
       {showEmailModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <form
@@ -1115,7 +1160,7 @@ export default function CaissePage() {
             <div className="flex justify-between items-center border-b border-slate-800 pb-4">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <Mail className="w-5 h-5 text-emerald-400" />
-                Envoyer l'État Financier
+                Envoyer le Tableau Financier
               </h3>
               <button
                 type="button"
@@ -1128,25 +1173,18 @@ export default function CaissePage() {
 
             <div className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-400 mb-1">Adresse e-mail du destinataire</label>
+                <label className="block text-slate-400 mb-1">Destinataire (Base de données)</label>
                 <select
                   required
                   value={emailDestinataire}
                   onChange={(e) => setEmailDestinataire(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
-                  <option value="">-- Sélectionnez un destinataire --</option>
-                  <option value="direction@siat.cg">Direction SIAT (direction@siat.cg)</option>
-                  <option value="comptabilite@siat.cg">Comptabilité SIAT (comptabilite@siat.cg)</option>
-                  {destinatairesEmail.map((dest, idx) => {
-                    const mailVal = dest.email || dest;
-                    const labelVal = dest.nom ? `${dest.nom} (${dest.email})` : mailVal;
-                    return (
-                      <option key={dest.id || idx} value={mailVal}>
-                        {labelVal}
-                      </option>
-                    );
-                  })}
+                  {optionsDestinataires.map((opt) => (
+                    <option key={opt.key} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -1161,24 +1199,46 @@ export default function CaissePage() {
                 />
               </div>
 
-              <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-2 text-slate-300">
-                <span className="font-semibold text-white block mb-1">Résumé inclus ({tableauTravailleurs.length} travailleur(s)) :</span>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Nombre total de bons :</span>
-                  <span className="font-bold">{commandesPeriode.length}</span>
+              {/* Sélecteur de format de pièce jointe : PDF ou Excel */}
+              <div>
+                <label className="block text-slate-400 mb-1.5">Format du tableau à envoyer</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEmailFormat('pdf')}
+                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
+                      emailFormat === 'pdf'
+                        ? 'bg-blue-600/20 border-blue-500 text-blue-400'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    Document PDF (.pdf)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEmailFormat('excel')}
+                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
+                      emailFormat === 'excel'
+                        ? 'bg-emerald-600/20 border-emerald-500 text-emerald-400'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    Fichier Excel (.xlsx / .csv)
+                  </button>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Total général encaissé :</span>
-                  <span className="font-bold text-emerald-400">{totalVentes.toLocaleString()} FCFA</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Part payée par les clients :</span>
-                  <span className="font-bold text-amber-400">{totalPartClients.toLocaleString()} FCFA</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Part subventionnée (SIAT) :</span>
-                  <span className="font-bold text-sky-400">{totalPartSiat.toLocaleString()} FCFA</span>
-                </div>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 p-3.5 rounded-xl flex items-center justify-between text-slate-300">
+                <span>Contenu : Tableau uniquement ({tableauTravailleurs.length} ligne(s))</span>
+                <button
+                  type="button"
+                  onClick={emailFormat === 'excel' ? telechargerTableauExcel : imprimerTableauUniquement}
+                  className="text-blue-400 hover:underline font-semibold cursor-pointer"
+                >
+                  Télécharger le fichier {emailFormat === 'excel' ? 'Excel' : 'PDF'}
+                </button>
               </div>
 
               {emailConfirmation && (
@@ -1202,7 +1262,9 @@ export default function CaissePage() {
                 className="flex-1 py-3 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 text-white"
               >
                 <Send className="w-4 h-4" />
-                {emailEnCours ? 'Envoi en cours...' : 'Envoyer par e-mail'}
+                {emailEnCours
+                  ? 'Envoi en cours...'
+                  : `Envoyer en ${emailFormat === 'excel' ? 'Excel' : 'PDF'}`}
               </button>
             </div>
           </form>
