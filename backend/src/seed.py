@@ -101,7 +101,6 @@ async def seed() -> None:
                 beneficiary_id=random.choice(beneficiaries).id,
                 account_id=random.choice(cashier_accounts).id,
                 order_number=fake.unique.bothify(text="PO-#####"),
-                quantity=random.randint(1, 5),
                 amount=round(random.uniform(2, 25), 2),
             )
             session.add(order)

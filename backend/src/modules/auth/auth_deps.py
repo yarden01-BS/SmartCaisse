@@ -71,3 +71,15 @@ async def require_admin(
             detail="Administrator access required",
         )
     return current
+
+
+async def require_cashier(
+    current: dict[str, str] = Depends(get_current_account),  # noqa: B008
+) -> dict[str, str]:
+    """Require an authenticated account with the cashier role."""
+    if current.get("role") != AccountType.CASHIER.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cashier access required",
+        )
+    return current

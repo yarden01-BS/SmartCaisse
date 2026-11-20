@@ -160,7 +160,6 @@ class PurchaseOrder(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     order_number: Mapped[str]
-    quantity: Mapped[int]
     amount: Mapped[float]
 
     beneficiary: Mapped[Beneficiary] = relationship(

@@ -20,6 +20,7 @@ backend/
     │   ├── admin/
     │   ├── auth/
     │   ├── beneficiary/
+    │   ├── cashier/
     │   └── users/
     ├── main.py
     ├── seed.py
@@ -39,6 +40,7 @@ backend/
 | `src/modules/admin/` | Functionality and business logic related to administrators. |
 | `src/modules/auth/` | Login endpoint and the bearer-token dependencies shared with other modules. |
 | `src/modules/beneficiary/` | Admin-only create, update, and suspend operations for beneficiaries. |
+| `src/modules/cashier/` | Cashier-only purchase orders, transactions, and accounting reports. |
 | `src/modules/users/` | Profile of the logged-in account, exposed through `GET /me`. |
 | `src/main.py` | FastAPI application entry point; registers the routers. |
 | `src/seed.py` | Inserts fake development data, including demo login accounts. |
@@ -241,6 +243,101 @@ GET /beneficiaries?sort=old&is_active=true
 ```
 
 An invalid `sort` or `is_active` value returns `422`.
+
+## Cashier workflow
+
+These routes are available to **cashier accounts only**. They require `Authorization: Bearer <access_token>`; an admin token receives `403`, and no token receives `401`. A cashier can only process orders that the cashier himself registered.
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/cashier/purchase-orders` | Register a purchase order handed over by a beneficiary. |
+| `POST` | `/cashier/purchase-orders/{id}/transactions` | Perform the payment and record the subsidy split. |
+| `GET` | `/cashier/reports` | Return the accounting breakdown of the cashier's transactions. |
+
+### Subsidy rules
+
+- The company covers **50%** of the order total; the beneficiary pays the remaining 50%.
+- The company contribution is capped at **1,000 FCFA per order**.
+- When the total exceeds **2,000 FCFA**, the company contribution stays at 1,000 FCFA and the beneficiary pays the whole difference.
+- Amounts are rounded to the nearest FCFA, and `company_share + customer_share` always equals `total_amount`.
+
+| Order total | Company share | Client share |
+|---:|---:|---:|
+| 1,000 | 500 | 500 |
+| 2,000 | 1,000 | 1,000 |
+| 2,001 | 1,000 | 1,001 |
+| 2,500 | 1,000 | 1,500 |
+
+### 1. Register the order
+
+`POST /cashier/purchase-orders`
+
+```json
+{
+  "beneficiary_id": 16,
+  "order_number": "PO-00042",
+  "amount": 2500
+}
+```
+
+Response (`201`):
+
+```json
+{
+  "id": 41,
+  "beneficiary_id": 16,
+  "account_id": 25,
+  "order_number": "PO-00042",
+  "amount": 2500.0,
+  "order_date": "2026-11-20T10:30:00Z"
+}
+```
+
+An unknown or inactive beneficiary returns `404`.
+
+### 2. Perform the transaction
+
+`POST /cashier/purchase-orders/41/transactions` has no request body. The split is computed by the backend.
+
+Response (`201`):
+
+```json
+{
+  "id": 9,
+  "purchase_order_id": 41,
+  "order_number": "PO-00042",
+  "beneficiary_id": 16,
+  "account_id": 25,
+  "total_amount": 2500,
+  "customer_share": 1500,
+  "company_share": 1000,
+  "created_at": "2026-11-20T10:31:00Z"
+}
+```
+
+An unknown order returns `404`. Paying the same order twice returns `409`.
+
+### 3. Accounting traceability
+
+`GET /cashier/reports` aggregates the cashier's persisted transactions by day. Every row and the overall totals explicitly separate the amounts:
+
+```json
+{
+  "transaction_count": 1,
+  "total_amount": 2500,
+  "customer_share": 1500,
+  "company_share": 1000,
+  "periods": [
+    {
+      "period": "2026-11-20",
+      "transaction_count": 1,
+      "total_amount": 2500,
+      "customer_share": 1500,
+      "company_share": 1000
+    }
+  ]
+}
+```
 
 ## Database
 

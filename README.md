@@ -45,6 +45,7 @@ SmartCaisse/
 │       │   ├── admin/
 │       │   ├── auth/
 │       │   ├── beneficiary/
+│       │   ├── cashier/
 │       │   └── users/
 │       ├── main.py
 │       └── tests/
@@ -53,7 +54,7 @@ SmartCaisse/
 └── README.md
 ```
 
-The `auth` module handles login and JWT validation. The `users` module exposes `GET /me`, which returns the profile of the account identified by the access token. See the [Backend Documentation](./backend/README.md) for details.
+The `auth` module handles login, refresh-token rotation, and JWT validation. The `users` module exposes `GET /me`, which returns the profile of the account identified by the access token. The `beneficiary` module is admin-only, and the `cashier` module handles purchase orders, subsidy transactions, and accounting reports. See the [Backend Documentation](./backend/README.md) for details.
 
 ## Prerequisites
 
