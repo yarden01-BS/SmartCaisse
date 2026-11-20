@@ -42,7 +42,7 @@ export default function AdminPage() {
   const [sousPage, setSousPage] = useState('comptes-liste');
 
   
-  // 1. COMPTES UTILISATEURS (SANS DONNÉES FICTIVES)
+  // 1. COMPTES UTILISATEURS (Sans données fictives)
   
   const [comptes, setComptes] = useState([]);
 
@@ -65,6 +65,7 @@ export default function AdminPage() {
   const [travailleurs, setTravailleurs] = useState([]);
 
   // Ajout Travailleur
+  const [travMatricule, setTravMatricule] = useState('');
   const [travNom, setTravNom] = useState('');
   const [travPrenom, setTravPrenom] = useState('');
   const [travStatut, setTravStatut] = useState('Travailleur');
@@ -223,7 +224,7 @@ export default function AdminPage() {
     );
   };
 
-  // --- Capture des traits faciaux ---
+  //  Capture des traits faciaux 
   const lancerScanTraitsFaciaux = async (modeEdition = false) => {
     setIsScanningTraits(true);
     try {
@@ -261,11 +262,12 @@ export default function AdminPage() {
   // Ajouter un travailleur 
   const handleAjouterTravailleur = (e) => {
     e.preventDefault();
-    if (!travNom.trim() || !travPrenom.trim()) {
+    const matriculeFormate = travMatricule.trim().toUpperCase();
+    if (!matriculeFormate || !travNom.trim() || !travPrenom.trim()) {
       afficherDialog(
         'erreur',
         'Champs obligatoires',
-        'Veuillez saisir le nom et le prénom du travailleur.'
+        'Veuillez saisir le matricule (ex: SA7206), le nom et le prénom du travailleur.'
       );
       return;
     }
@@ -280,6 +282,7 @@ export default function AdminPage() {
 
     const nouveau = {
       id: Date.now(),
+      matricule: matriculeFormate,
       nom: travNom.trim().toUpperCase(),
       prenom: travPrenom.trim(),
       statut: travStatut,
@@ -287,6 +290,7 @@ export default function AdminPage() {
     };
 
     setTravailleurs([nouveau, ...travailleurs]);
+    setTravMatricule('');
     setTravNom('');
     setTravPrenom('');
     setTravStatut('Travailleur');
@@ -295,21 +299,22 @@ export default function AdminPage() {
     afficherDialog(
       'succes',
       'Travailleur enregistré',
-      `${nouveau.prenom} ${nouveau.nom} (${nouveau.statut}) a été enregistré avec sa signature faciale unique.`
+      `${nouveau.prenom} ${nouveau.nom} (${nouveau.matricule} • ${nouveau.statut}) a été enregistré avec sa signature faciale unique.`
     );
   };
 
   // Modifier un travailleur 
   const ouvrirModificationTravailleur = (trav) => {
     setMenuTravOuvertId(null);
-    setEditTravailleur({ ...trav });
+    setEditTravailleur({ ...trav, matricule: trav.matricule || '' });
     setSousPage('travailleurs-modifier');
   };
 
   const handleValiderModificationTravailleur = (e) => {
     e.preventDefault();
-    if (!editTravailleur || !editTravailleur.nom.trim() || !editTravailleur.prenom.trim()) {
-      afficherDialog('erreur', 'Champs invalides', 'Le nom et le prénom sont obligatoires.');
+    const matriculeModifie = (editTravailleur?.matricule || '').trim().toUpperCase();
+    if (!editTravailleur || !matriculeModifie || !editTravailleur.nom.trim() || !editTravailleur.prenom.trim()) {
+      afficherDialog('erreur', 'Champs invalides', 'Le matricule, le nom et le prénom sont obligatoires.');
       return;
     }
 
@@ -318,6 +323,7 @@ export default function AdminPage() {
         t.id === editTravailleur.id
           ? {
               ...t,
+              matricule: matriculeModifie,
               nom: editTravailleur.nom.trim().toUpperCase(),
               prenom: editTravailleur.prenom.trim(),
               statut: editTravailleur.statut,
@@ -331,7 +337,7 @@ export default function AdminPage() {
     afficherDialog(
       'succes',
       'Travailleur modifié',
-      `La fiche de ${editTravailleur.prenom.trim()} ${editTravailleur.nom.trim()} a été mise à jour.`
+      `La fiche de ${editTravailleur.prenom.trim()} ${editTravailleur.nom.trim()} (${matriculeModifie}) a été mise à jour.`
     );
   };
 
@@ -494,7 +500,7 @@ export default function AdminPage() {
         {/* Contenu principal */}
         <main className="flex-1 p-6 overflow-y-auto">
           {/* 
-          1. AFFICHAGE DES COMPTES UTILISATEURS
+1. AFFICHAGE DES COMPTES UTILISATEURS
            */}
           {sousPage === 'comptes-liste' && (
             <div className="space-y-6 max-w-5xl mx-auto">
@@ -645,7 +651,7 @@ export default function AdminPage() {
           )}
 
           {/* 
-          2. CRÉATION DE COMPTE (AVEC E-MAIL)
+2. CRÉATION DE COMPTE 
            */}
           {sousPage === 'comptes-creer' && (
             <div className="max-w-lg mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl">
@@ -732,7 +738,7 @@ export default function AdminPage() {
           )}
 
           {/* 
-          3. MODIFICATION D'UN COMPTE EXISTANT
+3. MODIFICATION D'UN COMPTE EXISTANT
            */}
           {sousPage === 'comptes-modifier' && editCompte && (
             <div className="max-w-lg mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl">
@@ -819,28 +825,38 @@ export default function AdminPage() {
           )}
 
           {/* 
-          4. GESTION DES TRAVAILLEURS + EXPORT PDF
+4. GESTION DES TRAVAILLEURS & STAGIAIRES
            */}
           {sousPage === 'travailleurs' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
-              {/* Formulaire d'ajout + Extraction des traits faciaux */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between">
-                <div>
-                  <h2 className="text-xl font-bold mb-1">Ajouter un Travailleur</h2>
-                  <p className="text-xs text-slate-400 mb-6">
-                    Saisissez son identité et extrayez sa signature faciale unique
-                  </p>
-                </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                <h2 className="text-xl font-bold mb-1">Enregistrer un Travailleur / Stagiaire</h2>
+                <p className="text-xs text-slate-400 mb-6">
+                  Renseignez l'identité, le matricule et scannez les traits faciaux
+                </p>
 
-                <form onSubmit={handleAjouterTravailleur} className="space-y-4 text-xs flex-1 flex flex-col">
+                <form onSubmit={handleAjouterTravailleur} className="space-y-4 text-xs">
+                  <div>
+                    <label className="block text-slate-400 mb-1">Matricule</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: SA7206"
+                      value={travMatricule}
+                      onChange={(e) =>
+                        setTravMatricule(e.target.value.toUpperCase().replace(/\s+/g, ''))
+                      }
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-mono focus:outline-none focus:border-blue-500 text-sm"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-slate-400 mb-1">Nom</label>
                     <input
                       type="text"
-                      placeholder="Ex: MAKOSSO"
+                      placeholder="Ex: Makosso"
                       value={travNom}
                       onChange={(e) => setTravNom(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm"
                     />
                   </div>
 
@@ -851,7 +867,7 @@ export default function AdminPage() {
                       placeholder="Ex: Jean"
                       value={travPrenom}
                       onChange={(e) => setTravPrenom(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm"
                     />
                   </div>
 
@@ -860,22 +876,21 @@ export default function AdminPage() {
                     <select
                       value={travStatut}
                       onChange={(e) => setTravStatut(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white cursor-pointer"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm cursor-pointer"
                     >
                       <option value="Travailleur">Travailleur</option>
                       <option value="Stagiaire">Stagiaire</option>
                     </select>
                   </div>
 
-                  {/* Bloc Extraction des traits faciaux */}
-                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-3">
-                    <span className="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
+                    <span className="font-semibold text-slate-300 flex items-center gap-2">
                       <ScanFace className="w-4 h-4 text-blue-400" />
-                      Traits Faciaux (ID Numérique)
+                      Empreinte des traits faciaux
                     </span>
 
                     {cameraActive && (
-                      <div className="relative w-full h-40 bg-black rounded-xl overflow-hidden border border-blue-500/40 flex items-center justify-center">
+                      <div className="relative w-full h-36 bg-black rounded-xl overflow-hidden border border-blue-500/40 flex items-center justify-center">
                         <video
                           ref={videoRef}
                           autoPlay
@@ -883,20 +898,6 @@ export default function AdminPage() {
                           muted
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-blue-900/20 backdrop-blur-[1px] flex items-center justify-center">
-                          <span className="bg-black/80 text-blue-300 text-[11px] px-3 py-1 rounded-full font-medium animate-pulse">
-                            Extraction des points faciaux...
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {travSignature && !cameraActive && (
-                      <div className="w-full bg-slate-900 border border-emerald-500/40 rounded-xl p-3 text-center space-y-1">
-                        <span className="font-mono text-xs text-emerald-400 font-bold block">
-                          {travSignature}
-                        </span>
-                        <span className="text-[10px] text-slate-400 block">Signature prête</span>
                       </div>
                     )}
 
@@ -904,96 +905,102 @@ export default function AdminPage() {
                       type="button"
                       disabled={isScanningTraits}
                       onClick={() => lancerScanTraitsFaciaux(false)}
-                      className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer text-white transition-colors"
+                      className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:cursor-not-allowed text-white"
                     >
                       <Camera className="w-4 h-4" />
-                      {travSignature ? (
-                        <>{isScanningTraits ? 'Analyse en cours...' : 'Recalculer les traits faciaux'}</>
-                      ) : (
-                        <>{isScanningTraits ? 'Lecture des traits en cours...' : 'Scanner le visage (Webcam)'}</>
-                      )}
+                      {isScanningTraits
+                        ? 'Capture des traits faciaux en cours...'
+                        : travSignature
+                          ? 'Recapturer les traits faciaux'
+                          : 'Scanner les traits faciaux'}
                     </button>
+
+                    <div
+                      className={`p-2.5 rounded-xl text-xs font-mono break-all ${
+                        travSignature
+                          ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                          : 'bg-slate-900 border border-slate-800 text-slate-400 text-center'
+                      }`}
+                    >
+                      {travSignature || 'En attente de capture faciale'}
+                    </div>
                   </div>
 
                   <button
                     type="submit"
-                    className="mt-auto w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-colors cursor-pointer"
+                    className="w-full py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
                   >
+                    <CheckCircle2 className="w-4 h-4" />
                     Enregistrer le travailleur
                   </button>
                 </form>
               </div>
 
-              {/* Liste des travailleurs + Bouton Exporter en PDF */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between">
-                <div>
-                  <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
-                    <div>
-                      <h2 className="text-lg font-bold">Personnel Enregistré</h2>
-                      <p className="text-xs text-slate-400">
-                        Effectif actuel : {travailleurs.length} personne(s)
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        afficherDialog(
-                          'succes',
-                          'Export PDF',
-                          'Fonctionnalité d’export PDF prête à être reliée à votre générateur de documents.'
-                        )
-                      }
-                      className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer text-white"
-                    >
-                      <FileDown className="w-4 h-4 text-emerald-400" />
-                      Exporter en PDF
-                    </button>
-                  </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-bold">Liste du Personnel Enregistré</h2>
+                  <span className="bg-slate-950 border border-slate-800 text-xs text-slate-300 px-3 py-1.5 rounded-xl font-semibold">
+                    {travailleurs.length} enregistré(s)
+                  </span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[460px]">
+                <div className="flex-1 overflow-y-auto space-y-3 max-h-[560px]">
                   {travailleurs.length === 0 ? (
                     <p className="text-center text-slate-500 text-sm py-12">
-                      Aucun travailleur enregistré pour le moment. Utilisez le formulaire à gauche pour ajouter du personnel.
+                      Aucun travailleur ou stagiaire enregistré pour le moment.
                     </p>
                   ) : (
-                    travailleurs.map((t) => (
+                    travailleurs.map((trav) => (
                       <div
-                        key={t.id}
-                        className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3"
+                        key={trav.id}
+                        className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex justify-between items-center gap-3 relative"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center font-bold text-xs">
-                            {t.prenom.charAt(0)}
-                            {t.nom.charAt(0)}
-                          </div>
-                          <div>
-                            <strong className="text-sm text-white block">
-                              {t.prenom} {t.nom}
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <strong className="text-sm text-white">
+                              {trav.prenom} {trav.nom}
                             </strong>
-                            <span className="text-xs text-slate-400 block">{t.statut}</span>
-                            <span className="text-[10px] font-mono text-slate-500">
-                              {t.signatureFaciale}
+                            {trav.matricule && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-900 border border-slate-700 text-slate-300">
+                                {trav.matricule}
+                              </span>
+                            )}
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-400">
+                              {trav.statut}
                             </span>
                           </div>
+                          <span className="text-[11px] font-mono text-slate-400 block break-all">
+                            {trav.signatureFaciale}
+                          </span>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="relative" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={() => ouvrirModificationTravailleur(t)}
-                            className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-600 text-blue-400 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
-                            title="Modifier"
+                            onClick={() =>
+                              setMenuTravOuvertId(menuTravOuvertId === trav.id ? null : trav.id)
+                            }
+                            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 cursor-pointer"
+                            title="Options"
                           >
-                            <Edit3 className="w-4 h-4" />
+                            <MoreVertical className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleSupprimerTravailleur(t)}
-                            className="p-2 rounded-xl bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+
+                          {menuTravOuvertId === trav.id && (
+                            <div className="absolute right-0 top-11 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-20 py-2 w-40 text-left">
+                              <button
+                                onClick={() => ouvrirModificationTravailleur(trav)}
+                                className="w-full px-4 py-2 text-left text-xs text-slate-200 hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-blue-400" /> Modifier
+                              </button>
+                              <button
+                                onClick={() => handleSupprimerTravailleur(trav)}
+                                className="w-full px-4 py-2 text-left text-xs text-red-400 hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-red-400" /> Supprimer
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))
@@ -1004,16 +1011,32 @@ export default function AdminPage() {
           )}
 
           {/* 
-          5. MODIFICATION D'UN TRAVAILLEUR EXISTANT
-         */}
+5. MODIFICATION D'UN TRAVAILLEUR
+           */}
           {sousPage === 'travailleurs-modifier' && editTravailleur && (
             <div className="max-w-lg mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl">
-              <h2 className="text-xl font-bold mb-1">Modifier le Travailleur</h2>
+              <h2 className="text-xl font-bold mb-1">Modifier le Travailleur / Stagiaire</h2>
               <p className="text-xs text-slate-400 mb-6">
-                Modifiez les informations de {editTravailleur.prenom} {editTravailleur.nom}
+                Mettez à jour l'identité, le matricule ou la signature faciale
               </p>
 
               <form onSubmit={handleValiderModificationTravailleur} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-slate-400 mb-1">Matricule</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: SA7206"
+                    value={editTravailleur.matricule || ''}
+                    onChange={(e) =>
+                      setEditTravailleur({
+                        ...editTravailleur,
+                        matricule: e.target.value.toUpperCase().replace(/\s+/g, ''),
+                      })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-mono focus:outline-none focus:border-blue-500 text-sm"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-slate-400 mb-1">Nom</label>
                   <input
@@ -1022,7 +1045,7 @@ export default function AdminPage() {
                     onChange={(e) =>
                       setEditTravailleur({ ...editTravailleur, nom: e.target.value })
                     }
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm"
                   />
                 </div>
 
@@ -1034,7 +1057,7 @@ export default function AdminPage() {
                     onChange={(e) =>
                       setEditTravailleur({ ...editTravailleur, prenom: e.target.value })
                     }
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm"
                   />
                 </div>
 
@@ -1053,10 +1076,10 @@ export default function AdminPage() {
                 </div>
 
                 <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
-                  <span className="font-semibold text-slate-300 block">Identifiant Biométrique Facial</span>
-                  <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 font-mono text-emerald-400 text-center text-xs">
-                    {editTravailleur.signatureFaciale}
-                  </div>
+                  <span className="font-semibold text-slate-300 flex items-center gap-2">
+                    <ScanFace className="w-4 h-4 text-blue-400" />
+                    Empreinte des traits faciaux
+                  </span>
 
                   {cameraActive && (
                     <div className="relative w-full h-36 bg-black rounded-xl overflow-hidden border border-blue-500/40 flex items-center justify-center">
@@ -1074,10 +1097,15 @@ export default function AdminPage() {
                     type="button"
                     disabled={isScanningTraits}
                     onClick={() => lancerScanTraitsFaciaux(true)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer text-white transition-colors"
+                    className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer text-white"
                   >
-                    {isScanningTraits ? 'Extraction en cours...' : 'Mettre à jour les traits faciaux (Webcam)'}
+                    <RefreshCw className="w-4 h-4" />
+                    {isScanningTraits ? 'Recapture en cours...' : 'Recapturer les traits faciaux'}
                   </button>
+
+                  <div className="p-2.5 rounded-xl text-xs font-mono break-all bg-slate-900 border border-slate-800 text-emerald-400">
+                    {editTravailleur.signatureFaciale}
+                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-4">
@@ -1092,7 +1120,7 @@ export default function AdminPage() {
                     type="submit"
                     className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-sm cursor-pointer text-white transition-colors"
                   >
-                    Valider les modifications
+                    Valider
                   </button>
                 </div>
               </form>
@@ -1101,12 +1129,10 @@ export default function AdminPage() {
         </main>
       </div>
 
-      {/* 
-      BOÎTE DE DIALOGUE (SUCCÈS OU ÉCHEC)
-       */}
+      {/* Boîte de dialogue */}
       {dialog.ouvert && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
             <div
               className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center ${
                 dialog.type === 'succes'
@@ -1120,21 +1146,14 @@ export default function AdminPage() {
                 <AlertTriangle className="w-8 h-8" />
               )}
             </div>
-
-            <div>
-              <h3 className="text-lg font-bold text-white mb-1">{dialog.titre}</h3>
-              <p className="text-xs text-slate-400">{dialog.message}</p>
-            </div>
-
+            <h3 className="text-lg font-bold text-white">{dialog.titre}</h3>
+            <p className="text-xs text-slate-300 leading-relaxed">{dialog.message}</p>
             <button
+              type="button"
               onClick={() => setDialog({ ...dialog, ouvert: false })}
-              className={`w-full py-3 rounded-xl font-bold text-sm cursor-pointer text-white transition-colors ${
-                dialog.type === 'succes'
-                  ? 'bg-emerald-600 hover:bg-emerald-500'
-                  : 'bg-red-600 hover:bg-red-500'
-              }`}
+              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-sm cursor-pointer text-white transition-colors"
             >
-              Fermer
+              OK
             </button>
           </div>
         </div>
