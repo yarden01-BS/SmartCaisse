@@ -4,7 +4,7 @@ Application de gestion des subventions accordées aux employés dans la cantine 
 
 ## Présentation
 
-SmartCaisse permet de gérer les bénéficiaires, de calculer la part prise en charge par l'entreprise et d'enregistrer les transactions de subvention. Le backend expose une API FastAPI sécurisée ; le frontend React sera ajouté au fur et à mesure du développement.
+SmartCaisse permet de gérer les bénéficiaires, de calculer la part prise en charge par l'entreprise et d'enregistrer les transactions de subvention. Le backend expose une API FastAPI sécurisée et le frontend React consomme cette API.
 
 ## Objectifs
 
@@ -15,28 +15,26 @@ SmartCaisse permet de gérer les bénéficiaires, de calculer la part prise en c
 ## Stack technique
 
 - **Backend** : Python, FastAPI, SQLAlchemy, PostgreSQL, Docker, `uv`.
-- **Frontend (prévu)** : React, JavaScript, Tailwind CSS.
-
-## Organisation du dépôt
-
-| Dossier / fichier | Rôle |
-|---|---|
-| `backend/` | API FastAPI, modèles, migrations, tests et documentation détaillée. Voir [backend/README.md](./backend/README.md). |
-| `.env.example` | Modèle de configuration à copier vers `.env` à la racine. |
-| `compose.yaml` | Service PostgreSQL utilisé en développement. |
-| `AGENTS.md` | Règles de travail du dépôt. |
-| `backend/AGENTS.md` | Règles spécifiques au backend. |
-
-> Le frontend React n'est pas encore présent dans le dépôt : aucun README dédié n'existe pour l'instant.
+- **Frontend** : React, JavaScript, Tailwind CSS.
 
 ## Installation et démarrage
 
-Les procédures complètes (configuration `.env`, création de `.venv` avec `uv sync`, PostgreSQL via Docker, migrations Alembic, données de démonstration, serveur FastAPI et tests) se trouvent dans la [documentation backend](./backend/README.md).
+La configuration, la création de l'environnement virtuel, les migrations, le seed, le serveur FastAPI et les tests sont décrits dans la documentation dédiée :
+
+- [Backend](./backend/README.md)
+- [Frontend](./frontend/README.md)
+
+## Structure
+
+La structure de chaque partie est maintenue dans son propre README :
+
+- [Structure du backend](./backend/README.md#structure-du-projet)
+- [Structure du frontend](./frontend/README.md#structure-du-projet)
 
 ## Documentation
 
-- [Backend](./backend/README.md) — installation, structure détaillée, authentification, bénéficiaires, caisse et rapports.
-- Frontend — à venir (aucun README dédié pour l'instant).
+- [Backend](./backend/README.md) — installation, authentification, administration des bénéficiaires, parcours caissier et rapports.
+- [Frontend](./frontend/README.md) — installation, dépendances, connexion de test et structure.
 
 ## Contribuer
 

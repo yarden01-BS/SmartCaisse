@@ -15,22 +15,36 @@ Smartcaisse is a cafteriat manager that manage employee subsidy of a company . B
 
 ## Project Structure
 
+```text
+SmartCaisse/
+├── backend/                              # Application backend FastAPI
+│   ├── migrations/                       # Configuration et historique Alembic
+│   │   └── versions/                     # Scripts de migration de la base de données
+│   └── src/                              # Code source du backend
+│       ├── core/                         # Configuration, sécurité et utilitaires partagés
+│       ├── db/                           # Moteur, sessions et modèles SQLAlchemy
+│       ├── modules/                      # Domaines métier
+│       │   ├── admin/                    # Fonctionnalités administrateur
+│       │   ├── auth/                     # Authentification, jetons et rôles
+│       │   ├── beneficiary/              # Administration des bénéficiaires
+│       │   ├── cashier/                  # Bons de commande, transactions et rapports
+│       │   └── users/                    # Profil du compte connecté
+│       └── tests/                        # Tests pytest du backend
+├── frontend/                             # Application frontend React
+│   ├── public/                           # Fichiers statiques
+│   └── src/                              # Code source du frontend
+│       └── features/                     # Fonctionnalités par domaine
+│           └── caissiere/                # Module métier caisse
+│               ├── components/           # Composants d'interface
+│               ├── hooks/                # Hooks React réutilisables
+│               ├── pages/                # Pages React
+│               ├── schemas/              # Validation (réservé)
+│               └── types/                # Types (réservé)
+└── src/                                  # Ancien emplacement racine de la page caisse
+    └── Pages/                            # Pages historiques
 ```
 
-SmartCaisse/
-├── .vscode/                  # VS Code workspace settings and configurations
-├── backend/                  # Backend application
-│   ├── migrations/           # Database migration configuration and history
-│   │   └── versions/         # Individual Alembic migration scripts
-│   └── src/                  # Backend source code
-│       ├── core/             # Core configuration, security and shared utilities
-│       ├── db/               # Database engine, session management and ORM models
-│       ├── modules/          # Business domain modules
-│       │   ├── admin/        # Administrator-related functionality
-│       │   └── caissiere/    # Cashier-related functionality
-│       └── tests/            # Backend automated tests
-└── temp/                     # Temporary files and development artifacts
-```
+La structure détaillée de chaque application est maintenue dans `backend/README.md` et `frontend/README.md`.
 
 ## Code Style & Conventions
 
