@@ -44,6 +44,7 @@ SmartCaisse/
 │       ├── modules/
 │       │   ├── admin/
 │       │   ├── auth/
+│       │   ├── beneficiary/
 │       │   └── users/
 │       ├── main.py
 │       └── tests/
@@ -98,43 +99,42 @@ Start the database and backend, then log in with a seeded dev account:
 ```bash
 curl -c cookies.txt -X POST http://localhost:8000/auth/login ^
   -H "Content-Type: application/json" ^
-  -d "{\"email\":\"donaldgarcia@example.net\",\"password\":\"password123\"}"
+  -d "{\"email\":\"admin@smartcaisse.com\",\"password\":\"password123\"}"
 ```
 
 ```json
 {
+  "access_token": "eyJhbGciOiJIUzI1NiJ9...",
   "token_type": "bearer",
-  "account_id": 1,
+  "account_id": 15,
   "role": "admin"
 }
 ```
 
-The JWT is only in the `Set-Cookie` header, never in the response body.
-
-The access token is stored in an `HttpOnly` cookie, so the browser sends it automatically. Use the same cookie jar to read the logged-in user's profile:
+The access token is in the JSON body and is sent as a bearer token. The long-lived refresh token is only in the `HttpOnly` `refresh_token` cookie saved in `cookies.txt`.
 
 ```bash
-curl -b cookies.txt http://localhost:8000/me
+curl -H "Authorization: Bearer <access_token>" http://localhost:8000/me
 ```
-
-`POST /auth/logout` clears the cookie.
 
 ```json
 {
-  "account_id": 1,
-  "email": "donaldgarcia@example.net",
+  "account_id": 15,
+  "email": "admin@smartcaisse.com",
   "role": "admin",
   "is_active": true,
   "profile": {
-    "id": 3,
-    "first_name": "Danielle",
-    "last_name": "Johnson",
-    "profession": "Haematologist",
+    "id": 16,
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "profession": "Teacher",
     "situation": "permanent",
     "is_active": true
   }
 }
 ```
+
+Rotate the refresh token with `POST /auth/refresh` (cookie sent automatically); revoke it with `POST /auth/logout`. Reusing a rotated or revoked refresh token returns `401`.
 
 See the [Backend Documentation](./backend/README.md) for all endpoints and configuration.
 

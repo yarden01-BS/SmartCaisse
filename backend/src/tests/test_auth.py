@@ -10,12 +10,13 @@ import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
-from starlette.requests import Request
 
 from src.core.config import settings
 from src.core.security import (
     create_access_token,
+    create_refresh_token,
     decode_access_token,
+    decode_refresh_token,
     hash_password,
     verify_password,
 )
@@ -23,15 +24,12 @@ from src.db.models import AccountType
 from src.db.session import get_session
 from src.main import app
 from src.modules.auth import auth_service
-from src.modules.auth.auth_deps import ACCESS_TOKEN_COOKIE, get_current_account
+from src.modules.auth.auth_deps import (
+    REFRESH_TOKEN_COOKIE,
+    get_current_account,
+    require_admin,
+)
 from src.modules.auth.auth_schemas import LoginResponse
-
-
-def make_request(cookie_token: str | None = None) -> Request:
-    headers: list[tuple[bytes, bytes]] = []
-    if cookie_token:
-        headers.append((b"cookie", f"{ACCESS_TOKEN_COOKIE}={cookie_token}".encode()))
-    return Request({"type": "http", "headers": headers, "method": "GET", "path": "/"})
 
 
 @pytest.fixture
@@ -43,6 +41,16 @@ def client() -> Iterator[TestClient]:
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+def login_response(
+    account_id: int = 7, role: AccountType = AccountType.CASHIER
+) -> LoginResponse:
+    return LoginResponse(
+        access_token=create_access_token({"sub": str(account_id), "role": role.value}),
+        account_id=account_id,
+        role=role,
+    )
 
 
 def test_password_hashing_round_trip() -> None:
@@ -60,26 +68,55 @@ def test_access_token_round_trip() -> None:
 
     assert payload["sub"] == "7"
     assert payload["role"] == "admin"
+    assert payload["type"] == "access"
     assert "exp" in payload
 
 
-def test_expired_token_is_rejected() -> None:
+def test_access_tokens_are_unique() -> None:
+    payload = {"sub": "7", "role": "admin"}
+
+    assert create_access_token(payload) != create_access_token(payload)
+
+
+def test_expired_access_token_is_rejected() -> None:
     token = create_access_token({"sub": "7"}, expires_delta=timedelta(seconds=-1))
 
     with pytest.raises(jwt.ExpiredSignatureError):
         decode_access_token(token)
 
 
-def test_login_returns_token(
+def test_refresh_token_round_trip() -> None:
+    token = create_refresh_token({"sub": "7", "role": "admin"})
+    payload = decode_refresh_token(token)
+
+    assert payload["sub"] == "7"
+    assert payload["role"] == "admin"
+    assert payload["type"] == "refresh"
+    assert payload["jti"]
+    assert "exp" in payload
+
+
+def test_expired_refresh_token_is_rejected() -> None:
+    token = create_refresh_token({"sub": "7"}, expires_delta=timedelta(seconds=-1))
+
+    with pytest.raises(jwt.ExpiredSignatureError):
+        decode_refresh_token(token)
+
+
+def test_access_token_is_not_a_refresh_token() -> None:
+    token = create_access_token({"sub": "7"})
+
+    with pytest.raises(jwt.InvalidTokenError):
+        decode_refresh_token(token)
+
+
+def test_login_returns_access_token_in_json(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     async def fake_authenticate(
         session: Any, credentials: Any
-    ) -> tuple[str, LoginResponse]:
-        return "signed-token", LoginResponse(
-            account_id=7,
-            role=AccountType.CASHIER,
-        )
+    ) -> tuple[str, str, LoginResponse]:
+        return "signed-access", "signed-refresh", login_response()
 
     monkeypatch.setattr(auth_service, "authenticate", fake_authenticate)
     response = client.post(
@@ -89,23 +126,21 @@ def test_login_returns_token(
 
     assert response.status_code == 200
     assert response.json() == {
+        "access_token": "signed-access",
         "token_type": "bearer",
         "account_id": 7,
         "role": "cashier",
     }
-    assert "access_token" not in response.json()
+    assert "refresh_token" not in response.json()
 
 
-def test_login_sets_httponly_cookie(
+def test_login_sets_httponly_refresh_cookie(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     async def fake_authenticate(
         session: Any, credentials: Any
-    ) -> tuple[str, LoginResponse]:
-        return "signed-token", LoginResponse(
-            account_id=7,
-            role=AccountType.CASHIER,
-        )
+    ) -> tuple[str, str, LoginResponse]:
+        return "signed-access", "signed-refresh", login_response()
 
     monkeypatch.setattr(auth_service, "authenticate", fake_authenticate)
     response = client.post(
@@ -114,10 +149,11 @@ def test_login_sets_httponly_cookie(
     )
 
     cookie_header = response.headers["set-cookie"].lower()
-    assert f"{ACCESS_TOKEN_COOKIE}=signed-token" in cookie_header
+    assert f"{REFRESH_TOKEN_COOKIE}=signed-refresh" in cookie_header
+    assert "access_token=" not in cookie_header
     assert "httponly" in cookie_header
     assert "samesite=lax" in cookie_header
-    assert f"max-age={settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60}" in cookie_header
+    assert f"max-age={settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60}" in cookie_header
     assert ("secure" in cookie_header) is settings.COOKIE_SECURE
 
 
@@ -126,7 +162,7 @@ def test_login_rejects_invalid_credentials(
 ) -> None:
     async def fake_authenticate(
         session: Any, credentials: Any
-    ) -> tuple[str, LoginResponse]:
+    ) -> tuple[str, str, LoginResponse]:
         raise auth_service.InvalidCredentialsError("Invalid email or password")
 
     monkeypatch.setattr(auth_service, "authenticate", fake_authenticate)
@@ -149,38 +185,54 @@ def test_login_validates_email(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_logout_clears_cookie(client: TestClient) -> None:
+def test_logout_revokes_and_clears_refresh_cookie(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[str | None] = []
+
+    async def fake_revoke(session: Any, token: str | None) -> None:
+        seen.append(token)
+
+    monkeypatch.setattr(auth_service, "revoke", fake_revoke)
+    client.cookies.set(REFRESH_TOKEN_COOKIE, "signed-refresh")
     response = client.post("/auth/logout")
 
     assert response.status_code == 200
     assert response.json() == {"detail": "Logged out"}
+    assert seen == ["signed-refresh"]
     cookie_header = response.headers["set-cookie"].lower()
-    assert f"{ACCESS_TOKEN_COOKIE}=" in cookie_header
+    assert f"{REFRESH_TOKEN_COOKIE}=" in cookie_header
     assert "max-age=0" in cookie_header
+
+
+def test_logout_without_cookie_still_succeeds(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[str | None] = []
+
+    async def fake_revoke(session: Any, token: str | None) -> None:
+        seen.append(token)
+
+    monkeypatch.setattr(auth_service, "revoke", fake_revoke)
+    response = client.post("/auth/logout")
+
+    assert response.status_code == 200
+    assert seen == [None]
 
 
 def test_get_current_account_accepts_valid_bearer_token() -> None:
     token = create_access_token({"sub": "3", "role": "admin"})
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
 
-    assert asyncio.run(get_current_account(make_request(), credentials)) == {
+    assert asyncio.run(get_current_account(credentials)) == {
         "account_id": "3",
         "role": "admin",
     }
 
 
-def test_get_current_account_reads_cookie() -> None:
-    token = create_access_token({"sub": "5", "role": "cashier"})
-
-    assert asyncio.run(get_current_account(make_request(token), None)) == {
-        "account_id": "5",
-        "role": "cashier",
-    }
-
-
 def test_get_current_account_without_token_is_unauthorized() -> None:
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(get_current_account(make_request(), None))
+        asyncio.run(get_current_account(None))
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Not authenticated"
@@ -190,6 +242,28 @@ def test_get_current_account_rejects_invalid_token() -> None:
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="garbage")
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(get_current_account(make_request(), credentials))
+        asyncio.run(get_current_account(credentials))
 
     assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Invalid or expired token"
+
+
+def test_get_current_account_rejects_refresh_token() -> None:
+    token = create_refresh_token({"sub": "3", "role": "admin"})
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(get_current_account(credentials))
+
+    assert exc_info.value.status_code == 401
+
+
+def test_require_admin_checks_the_role_claim() -> None:
+    admin = {"account_id": "1", "role": "admin"}
+    cashier = {"account_id": "2", "role": "cashier"}
+
+    assert asyncio.run(require_admin(admin)) == admin
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(require_admin(cashier))
+
+    assert exc_info.value.status_code == 403

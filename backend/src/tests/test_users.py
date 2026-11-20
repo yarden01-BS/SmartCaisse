@@ -13,7 +13,7 @@ from src.db.models import AccountType, Situation
 from src.db.session import get_session
 from src.main import app
 from src.modules.auth import auth_service
-from src.modules.auth.auth_deps import ACCESS_TOKEN_COOKIE
+from src.modules.auth.auth_deps import REFRESH_TOKEN_COOKIE
 from src.modules.auth.auth_schemas import LoginResponse
 from src.modules.users import users_service
 from src.modules.users.users_repo import UserRepository
@@ -177,7 +177,7 @@ def test_get_profile_rejects_inactive_account(
         asyncio.run(users_service.get_profile(object(), 9))
 
 
-def test_me_reads_token_from_cookie(
+def test_me_does_not_accept_refresh_cookie(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     seen: list[int] = []
@@ -193,26 +193,31 @@ def test_me_reads_token_from_cookie(
 
     monkeypatch.setattr(users_service, "get_profile", fake_get_profile)
     token = create_access_token({"sub": "11", "role": "cashier"})
-    client.cookies.set(ACCESS_TOKEN_COOKIE, token)
+    client.cookies.set(REFRESH_TOKEN_COOKIE, token)
 
     response = client.get("/me")
 
-    assert response.status_code == 200
-    assert seen == [11]
+    assert response.status_code == 401
+    assert seen == []
 
 
-def test_login_cookie_is_used_by_me(
+def test_login_access_token_is_used_by_me(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     seen: list[int] = []
+    access_token = create_access_token({"sub": "12", "role": "cashier"})
 
     async def fake_authenticate(
         session: Any, credentials: Any
-    ) -> tuple[str, LoginResponse]:
-        token = create_access_token({"sub": "12", "role": "cashier"})
-        return token, LoginResponse(
-            account_id=12,
-            role=AccountType.CASHIER,
+    ) -> tuple[str, str, LoginResponse]:
+        return (
+            access_token,
+            "signed-refresh",
+            LoginResponse(
+                access_token=access_token,
+                account_id=12,
+                role=AccountType.CASHIER,
+            ),
         )
 
     async def fake_get_profile(session: Any, account_id: int) -> UserProfileResponse:
@@ -231,10 +236,12 @@ def test_login_cookie_is_used_by_me(
         "/auth/login",
         json={"email": "cashier@smartcaisse.com", "password": "password123"},
     )
-    me = client.get("/me")
+    me = client.get(
+        "/me", headers={"Authorization": f"Bearer {login.json()['access_token']}"}
+    )
 
     assert login.status_code == 200
-    assert ACCESS_TOKEN_COOKIE in login.cookies
-    assert "access_token" not in login.json()
+    assert REFRESH_TOKEN_COOKIE in login.cookies
+    assert "refresh_token" not in login.json()
     assert me.status_code == 200
     assert seen == [12]
