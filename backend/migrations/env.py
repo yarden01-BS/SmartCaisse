@@ -1,7 +1,10 @@
+import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from src.core.config import settings
 from src.db.models import Base
@@ -9,7 +12,7 @@ from src.db.models import Base
 # Cet objet est la configuration Alembic, qui fournit
 # l'accès aux valeurs du fichier .ini en cours d'utilisation.
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
+config.set_main_option("sqlalchemy.url", settings.ASYNC_DATABASE_URL.replace("%", "%%"))
 
 # Interprète le fichier de configuration pour la journalisation Python.
 # Cette ligne configure les journaux de base.
@@ -53,24 +56,34 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    """Exécute les migrations en mode « en ligne ».
+def run_migrations(connection: Connection) -> None:
+    context.configure(connection=connection, target_metadata=target_metadata)
 
-    Dans ce scénario, nous devons créer un moteur
-    et associer une connexion au contexte.
+    with context.begin_transaction():
+        context.run_migrations()
 
-    """
-    connectable = engine_from_config(
+
+async def run_async_migrations() -> None:
+    connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
-    with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+    async with connectable.connect() as connection:
+        await connection.run_sync(run_migrations)
 
-        with context.begin_transaction():
-            context.run_migrations()
+    await connectable.dispose()
+
+
+def run_migrations_online() -> None:
+    """Exécute les migrations en mode « en ligne ».
+
+    Dans ce scénario, nous devons créer un moteur asynchrone
+    et associer une connexion au contexte.
+
+    """
+    asyncio.run(run_async_migrations())
 
 
 if context.is_offline_mode():
