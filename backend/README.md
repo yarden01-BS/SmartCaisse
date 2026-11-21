@@ -84,8 +84,9 @@ Ne commettez jamais ce fichier. Ajustez les valeurs si besoin, en particulier `S
 ### 2. Démarrer PostgreSQL
 
 ```bash
-docker compose up -d
-docker compose ps
+# Depuis la racine du projet
+docker compose -f backend/compose.yml up -d
+docker compose -f backend/compose.yml up ps
 ```
 
 Le service `db` doit passer à l'état `healthy`. Le port `5432` doit être disponible. Pour arrêter la base : `docker compose down` ; pour supprimer aussi les données : `docker compose down -v`.
