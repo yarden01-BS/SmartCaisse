@@ -6,8 +6,6 @@ BASE_DIR = pathlib.Path(__file__).resolve().parents[3]
 
 
 class Settings(BaseSettings):
-    # URL synchrone utilisée par Alembic.
-    DATABASE_URL: str
     # URL asynchrone utilisée par l'application et le script d'amorçage.
     ASYNC_DATABASE_URL: str
     SECRET_KEY: str
