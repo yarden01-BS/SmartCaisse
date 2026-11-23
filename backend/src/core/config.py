@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_MINUTES: int
     # À activer en production (HTTPS uniquement) ; désactivé pour le développement local.
     COOKIE_SECURE: bool
+    # Origines autorisées par le CORS, séparées par des virgules.
+    CORS_ORIGINS: str
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 
 
