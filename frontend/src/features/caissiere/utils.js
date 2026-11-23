@@ -36,7 +36,7 @@ export function agregerParTravailleur(commandes) {
   return Object.values(map).sort((a, b) => b.total - a.total);
 }
 
-export function imprimerBonPdf(bon) {
+export function imprimerBonPdf(bon, caissiereNom = bon.caissiereNom || '') {
   const fenetre = window.open("", "_blank", "width=450,height=650");
   if (!fenetre) return;
   fenetre.document.write(`
@@ -58,7 +58,7 @@ export function imprimerBonPdf(bon) {
           <p style="margin:4px 0; font-weight:bold;">BON DE COMMANDE N° ${bon.numBon}</p>
         </div>
         <div class="row"><span>Date & Heure :</span><strong>${bon.date}</strong></div>
-        <div class="row"><span>Caissière :</span><strong>${bon.caissiereNom || "Sarah"}</strong></div>
+        <div class="row"><span>Caissière :</span><strong>${caissiereNom}</strong></div>
         <hr style="border:none; border-top:1px dashed #ccc; margin:12px 0;" />
         <div class="row"><span>Bénéficiaire :</span><strong>${bon.client.nom}</strong></div>
         <div class="row"><span>Matricule :</span><strong>${bon.client.matricule}</strong></div>

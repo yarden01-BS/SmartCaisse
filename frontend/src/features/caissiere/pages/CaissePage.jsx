@@ -1,18 +1,52 @@
-import { useState } from "react";
-import useCommandes from "../hooks/useCommandes";
-import { personnelMock } from "../mockData";
-import LoginScreen from "../components/LoginScreen";
-import CaisseHeader from "../components/CaisseHeader";
-import CommandeSection from "../components/CommandeSection";
-import RapportSection from "../components/RapportSection";
-import ProfilSection from "../components/ProfilSection";
-import BonPdfModal from "../components/BonPdfModal";
+import { useEffect, useState } from 'react';
+import useCommandes from '../hooks/useCommandes';
+import { personnelMock } from '../mockData';
+import { logout, restoreSession } from '../api';
+import LoginScreen from '../components/LoginScreen';
+import CaisseHeader from '../components/CaisseHeader';
+import CommandeSection from '../components/CommandeSection';
+import RapportSection from '../components/RapportSection';
+import ProfilSection from '../components/ProfilSection';
+import BonPdfModal from '../components/BonPdfModal';
 
 export default function CaissePage() {
   const [caissiere, setCaissiere] = useState(null);
-  const [section, setSection] = useState("commande"); // 'commande' | 'rapport' | 'profil'
+  const [chargement, setChargement] = useState(true);
+  const [section, setSection] = useState('commande'); // 'commande' | 'rapport' | 'profil'
   const [bonPdf, setBonPdf] = useState(null);
   const { commandes, ajouterCommande } = useCommandes();
+
+  useEffect(() => {
+    let actif = true;
+
+    restoreSession()
+      .then((utilisateur) => {
+        if (actif) setCaissiere(utilisateur);
+      })
+      .finally(() => {
+        if (actif) setChargement(false);
+      });
+
+    return () => {
+      actif = false;
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      setCaissiere(null);
+    }
+  };
+
+  if (chargement) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-400 flex items-center justify-center">
+        Vérification de la session...
+      </div>
+    );
+  }
 
   if (!caissiere) {
     return <LoginScreen onLogin={setCaissiere} />;
@@ -24,10 +58,10 @@ export default function CaissePage() {
         caissiere={caissiere}
         sectionActive={section}
         onChangeSection={setSection}
-        onLogout={() => setCaissiere(null)}
+        onLogout={handleLogout}
       />
 
-      {section === "commande" && (
+      {section === 'commande' && (
         <CommandeSection
           personnel={personnelMock}
           commandes={commandes}
@@ -36,12 +70,9 @@ export default function CaissePage() {
           onOuvrirBon={setBonPdf}
         />
       )}
-      {section === "rapport" && <RapportSection commandes={commandes} />}
-      {section === "profil" && (
-        <ProfilSection
-          caissiere={caissiere}
-          onLogout={() => setCaissiere(null)}
-        />
+      {section === 'rapport' && <RapportSection commandes={commandes} />}
+      {section === 'profil' && (
+        <ProfilSection caissiere={caissiere} onLogout={handleLogout} />
       )}
 
       {bonPdf && (

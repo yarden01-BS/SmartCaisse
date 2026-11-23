@@ -16,7 +16,6 @@ export const commandesInitiales = [
     prixTotal: 2500,
     partEntreprise: 1000,
     partClient: 1500,
-    caissiereNom: 'Sarah',
   },
   {
     numBon: 2,
@@ -25,7 +24,6 @@ export const commandesInitiales = [
     prixTotal: 1600,
     partEntreprise: 800,
     partClient: 800,
-    caissiereNom: 'Sarah',
   },
   {
     numBon: 3,
@@ -34,6 +32,5 @@ export const commandesInitiales = [
     prixTotal: 3000,
     partEntreprise: 1000,
     partClient: 2000,
-    caissiereNom: 'Sarah',
   },
 ];

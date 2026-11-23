@@ -82,7 +82,7 @@ export default function BonPdfModal({ bon, caissiereNom, onClose }) {
           </button>
           <button
             type="button"
-            onClick={() => imprimerBonPdf(bon)}
+            onClick={() => imprimerBonPdf(bon, caissiereNom)}
             className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
             <Printer className="w-4 h-4" />

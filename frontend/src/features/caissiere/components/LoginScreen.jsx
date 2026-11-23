@@ -1,29 +1,26 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { login } from '../api';
 
 export default function LoginScreen({ onLogin }) {
   const navigate = useNavigate();
-  const [nom, setNom] = useState('');
-  const [pwd, setPwd] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [connexion, setConnexion] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (nom.trim() && pwd === '1234') {
-      setError('');
-      onLogin({
-        id: 2,
-        matricule: 'CAIS-002',
-        nom: nom.trim(),
-        poste: 'Caisse Principale — Cantine SIAT',
-        telephone: '+242 06 600 12 34',
-        dateEmbauche: '15 Janvier 2025',
-        statut: 'Actif',
-        methodeAuth: 'Reconnaissance Faciale (Webcam)',
-      });
-    } else {
-      setError('Nom ou mot de passe incorrect (Test : 1234)');
+    setError('');
+    setConnexion(true);
+    try {
+      const caissiere = await login(email.trim(), password);
+      onLogin(caissiere);
+    } catch (err) {
+      setError(err.message || 'Connexion impossible.');
+    } finally {
+      setConnexion(false);
     }
   };
 
@@ -45,16 +42,21 @@ export default function LoginScreen({ onLogin }) {
           onSubmit={handleSubmit}
           className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl"
         >
-          <h1 className="text-2xl font-bold text-center mb-6">Ouverture de Caisse</h1>
+          <h1 className="text-2xl font-bold text-center mb-2">Ouverture de Caisse</h1>
+          <p className="text-center text-xs text-slate-500 mb-6">
+            Authentification via le serveur SmartCaisse
+          </p>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Nom de la caissière</label>
+              <label className="block text-sm text-slate-400 mb-1.5">Adresse e-mail</label>
               <input
-                type="text"
-                placeholder="Ex: Sarah"
-                value={nom}
-                onChange={(e) => setNom(e.target.value)}
+                type="email"
+                autoComplete="username"
+                placeholder="cashier@smartcaisse.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -63,18 +65,20 @@ export default function LoginScreen({ onLogin }) {
               <label className="block text-sm text-slate-400 mb-1.5">Mot de passe</label>
               <input
                 type="password"
-                placeholder="Ex: 1234"
-                value={pwd}
-                onChange={(e) => setPwd(e.target.value)}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-500 font-bold py-3.5 rounded-xl transition-colors mt-2 cursor-pointer"
+              disabled={connexion}
+              className="w-full bg-blue-600 hover:bg-blue-500 font-bold py-3.5 rounded-xl transition-colors mt-2 cursor-pointer disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed"
             >
-              Se connecter
+              {connexion ? 'Connexion...' : 'Se connecter'}
             </button>
 
             {error && <p className="text-red-400 text-sm text-center mt-2">{error}</p>}

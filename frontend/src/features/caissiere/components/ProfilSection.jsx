@@ -1,11 +1,11 @@
-import { Building2, Calendar, LogOut, Phone, ScanFace } from 'lucide-react';
+import { AtSign, Building2, LogOut, ShieldCheck, UserRound } from 'lucide-react';
 
 export default function ProfilSection({ caissiere, onLogout }) {
   const infos = [
-    { Icon: Building2, label: "Poste d'affectation", valeur: caissiere.poste },
-    { Icon: Phone, label: 'Téléphone', valeur: caissiere.telephone },
-    { Icon: Calendar, label: 'Date de prise de service', valeur: caissiere.dateEmbauche },
-    { Icon: ScanFace, label: 'Validation Biométrique', valeur: caissiere.methodeAuth, vert: true },
+    { Icon: AtSign, label: 'Email', valeur: caissiere.email },
+    { Icon: Building2, label: 'Société', valeur: caissiere.company || '—' },
+    { Icon: ShieldCheck, label: 'Rôle', valeur: caissiere.role },
+    { Icon: UserRound, label: 'Identifiant du compte', valeur: `#${caissiere.accountId}` },
   ];
 
   return (
@@ -16,27 +16,25 @@ export default function ProfilSection({ caissiere, onLogout }) {
         </div>
 
         <h2 className="text-2xl font-bold mb-1">{caissiere.nom}</h2>
-        <p className="text-sm text-slate-400 mb-4">
-          Opératrice de Caisse • Matricule : {caissiere.matricule}
-        </p>
+        <p className="text-sm text-slate-400 mb-4">Compte caissier SmartCaisse</p>
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-6">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          Compte {caissiere.statut}
+          Compte {caissiere.isActive ? 'actif' : 'inactif'}
         </div>
 
         <div className="w-full space-y-3 text-left bg-slate-950 border border-slate-800 rounded-2xl p-5 mb-6 text-sm">
-          {infos.map(({ Icon, label, valeur, vert }, i) => (
+          {infos.map(({ Icon, label, valeur }, i) => (
             <div
               key={label}
-              className={`flex justify-between items-center ${
+              className={`flex justify-between items-center gap-4 ${
                 i < infos.length - 1 ? 'pb-3 border-b border-slate-900' : ''
               }`}
             >
               <span className="text-slate-400 flex items-center gap-2">
                 <Icon className="w-4 h-4 text-blue-400" /> {label}
               </span>
-              <span className={`font-semibold ${vert ? 'text-emerald-400' : 'text-white'}`}>{valeur}</span>
+              <span className="font-semibold text-white break-all">{valeur}</span>
             </div>
           ))}
         </div>

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # SmartCaisse — Frontend
 
 Application de caisse pour la cantine SIAT : saisie des commandes, vérification faciale du client par webcam, bons de commande imprimables en PDF, et rapports financiers par travailleur.
@@ -75,14 +74,13 @@ Autres commandes utiles :
 
 > Les scripts disponibles dépendent de ton `package.json`.
 
-## Connexion (mode test)
+## Connexion
 
-| Champ        | Valeur                        |
-| ------------ | ----------------------------- |
-| Nom          | N'importe lequel (ex : `Sarah`) |
-| Mot de passe | `1234`                        |
+Le formulaire envoie l'e-mail et le mot de passe à `POST /auth/login` sur le backend Python. Seuls les comptes avec le rôle `cashier` peuvent ouvrir la caisse. Le jeton d'accès est conservé dans la session du navigateur et utilisé en bearer sur `GET /me` pour récupérer le profil réel ; le cookie de rafraîchissement reste géré par le serveur.
 
-Ces identifiants sont codés en dur pour les tests. Ils devront être remplacés par une vraie authentification via l'API.
+Le backend doit être démarré sur `http://localhost:8000`. Pour utiliser une autre adresse, définir `VITE_API_URL` dans un fichier `.env` à la racine de `frontend/` (par exemple `VITE_API_URL=http://localhost:8000`).
+
+Aucun identifiant n'est codé en dur dans le frontend. Les comptes de développement sont créés par `python -m src.seed` côté backend.
 
 ## Structure du projet
 
@@ -91,13 +89,14 @@ src/
 ├── App.jsx
 └── features/
     └── caissiere/
+        ├── api.js         # appels d'authentification vers le backend Python
         ├── components/    # composants d'interface (formulaire, rapport, modales...)
         ├── hooks/         # logique réutilisable (commandes, vérification faciale)
         ├── pages/         # page principale CaissePage
         ├── schemas/       # validation (réservé)
         ├── types/         # types (réservé)
         ├── utils.js       # calculs, agrégations, impression PDF
-        ├── mockData.js    # données de test
+        ├── mockData.js    # données de test (bénéficiaires et bons)
         └── index.js       # API publique de la feature
 ```
 

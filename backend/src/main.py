@@ -22,7 +22,7 @@ app.include_router(cashier_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173/"],  # URL de ton front
+    allow_origins=["http://localhost:5173"],  # URL de ton front
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
