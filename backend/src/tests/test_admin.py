@@ -167,6 +167,22 @@ def test_delete_account_requires_another_account(
     assert appels == [2]
 
 
+def test_delete_base_admin_is_protected(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    appels: list[int] = []
+
+    async def fake_remove(session: Any, account_id: int) -> None:
+        appels.append(account_id)
+        raise admin_service.ProtectedAccountError("protected")
+
+    monkeypatch.setattr(admin_service, "remove", fake_remove)
+    response = client.delete("/admin/accounts/1", headers=auth_headers("admin", 99))
+
+    assert response.status_code == 403
+    assert appels == [1]
+
+
 def test_split_name() -> None:
     assert admin_service._split_name("Nadia Malonga") == ("Nadia", "Malonga")
     assert admin_service._split_name("Nadia") == ("Nadia", "Nadia")

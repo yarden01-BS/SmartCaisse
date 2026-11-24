@@ -74,5 +74,9 @@ async def delete_account(
         )
     try:
         await admin_service.remove(session, account_id)
+    except admin_service.ProtectedAccountError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
     except admin_service.AccountNotFoundError as exc:
         raise _not_found(exc) from exc

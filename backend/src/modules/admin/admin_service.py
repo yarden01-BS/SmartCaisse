@@ -29,6 +29,10 @@ class AccountNotFoundError(Exception):
     """Levée lorsqu'aucun compte ne correspond à l'identifiant demandé."""
 
 
+class ProtectedAccountError(Exception):
+    """Levée lorsqu'on tente de supprimer le compte administrateur de base."""
+
+
 def _split_name(nom: str) -> tuple[str, str]:
     """Sépare un nom complet en prénom et nom de famille."""
     parties = nom.strip().split(maxsplit=1)
@@ -149,6 +153,9 @@ async def remove(session: AsyncSession, account_id: int) -> None:
     account = await repository.get_by_id(account_id)
     if account is None:
         raise AccountNotFoundError(f"Account {account_id} not found")
+
+    if account.id == 1:
+        raise ProtectedAccountError("The base administrator account cannot be deleted")
 
     if account.cashier_id is not None:
         cashier = account.cashier
