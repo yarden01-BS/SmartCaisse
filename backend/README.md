@@ -63,6 +63,43 @@ Chaque module conserve sa propre séparation des responsabilités : routage, val
 
 Le backend suit une architecture modulaire : les fonctionnalités sont organisées par domaine métier. Chaque module gère ses propres fonctionnalités et sa logique métier, tandis que les éléments partagés sont centralisés dans `core/` et ceux liés à la base de données dans `db/`.
 
+## Démarrage rapide (pas à pas)
+
+Depuis la racine du dépôt, puis depuis `backend` :
+
+```bash
+# 1. Configuration
+cp .env.example .env
+
+# 2. Base de données PostgreSQL
+docker compose -f backend/compose.yml up -d
+
+# 3. Dépendances Python
+cd backend
+uv sync
+
+# 4. Schéma de base
+uv run alembic upgrade head
+
+# 5. Données de démonstration (une seule fois)
+uv run python -m src.seed
+
+# 6. Serveur API
+uv run uvicorn src.main:app --reload
+```
+
+Puis, dans un autre terminal :
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+- API : `http://localhost:8000`
+- Swagger : `http://localhost:8000/docs`
+- Frontend : `http://localhost:5173`
+
 ## Démarrage complet (de la base de données à FastAPI)
 
 Cette procédure est à suivre exactement pour un nouvel environnement. Les commandes des étapes 1 à 3 se lancent depuis la **racine du dépôt**, les suivantes depuis le dossier `backend`.

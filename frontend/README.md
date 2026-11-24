@@ -21,6 +21,39 @@ node -v
 pnpm -v
 ```
 
+## Démarrage rapide (pas à pas)
+
+1. **Démarrer le backend** (dans un premier terminal) :
+   ```bash
+   cd ../backend
+   docker compose -f compose.yml up -d
+   uv sync
+   uv run alembic upgrade head
+   uv run python -m src.seed
+   uv run uvicorn src.main:app --reload
+   ```
+   L'API est alors disponible sur `http://localhost:8000`.
+
+2. **Installer et lancer le frontend** (dans un second terminal) :
+   ```bash
+   cd frontend
+   pnpm install
+   pnpm dev
+   ```
+
+3. **Ouvrir l'application** : `http://localhost:5173`.
+
+4. **Identifiants de démonstration** :
+   - Caissière : `cashier@smartcaisse.com` / `password123`
+   - Administrateur : `admin@smartcaisse.com` / `password123`
+
+5. **Vérifications utiles** :
+   ```bash
+   pnpm lint
+   pnpm test
+   pnpm build
+   ```
+
 ## Installer pnpm
 
 Choisis **une** des méthodes ci-dessous.
