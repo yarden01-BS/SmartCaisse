@@ -3,16 +3,16 @@ import { Camera, CheckCircle2, RefreshCw, ScanFace } from 'lucide-react';
 import useFaceSignature from '../hooks/useFaceSignature';
 import { normaliserMatricule } from '../utils';
 
-export default function TravailleurForm({ travailleur, onSoumettre, onAnnuler }) {
-  const estModification = Boolean(travailleur);
+export default function BeneficiaireForm({ beneficiaire, onSoumettre, onAnnuler }) {
+  const estModification = Boolean(beneficiaire);
   const { videoRef, cameraActive, isScanning, capturer } = useFaceSignature();
 
   const [form, setForm] = useState({
-    matricule: travailleur?.matricule ?? '',
-    nom: travailleur?.nom ?? '',
-    prenom: travailleur?.prenom ?? '',
-    statut: travailleur?.statut ?? 'Travailleur',
-    signatureFaciale: travailleur?.signatureFaciale ?? '',
+    matricule: beneficiaire?.matricule ?? '',
+    nom: beneficiaire?.nom ?? '',
+    prenom: beneficiaire?.prenom ?? '',
+    situation: beneficiaire?.situation ?? 'Permanent',
+    signatureFaciale: beneficiaire?.signatureFaciale ?? '',
   });
 
   const maj = (champ) => (e) => setForm({ ...form, [champ]: e.target.value });
@@ -21,15 +21,15 @@ export default function TravailleurForm({ travailleur, onSoumettre, onAnnuler })
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSoumettre(estModification ? { ...travailleur, ...form } : form);
+    onSoumettre(estModification ? { ...beneficiaire, ...form } : form);
   };
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
       <h2 className="text-xl font-bold mb-1">
         {estModification
-          ? 'Modifier le Travailleur / Stagiaire'
-          : 'Enregistrer un Travailleur / Stagiaire'}
+          ? 'Modifier le bénéficiaire'
+          : 'Créer un nouveau bénéficiaire'}
       </h2>
       <p className="text-xs text-slate-400 mb-6">
         {estModification
@@ -72,13 +72,13 @@ export default function TravailleurForm({ travailleur, onSoumettre, onAnnuler })
         </div>
 
         <div>
-          <label className="block text-slate-400 mb-1">Statut</label>
+          <label className="block text-slate-400 mb-1">Situation</label>
           <select
-            value={form.statut}
-            onChange={maj('statut')}
+            value={form.situation}
+            onChange={maj('situation')}
             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm cursor-pointer"
           >
-            <option value="Travailleur">Travailleur</option>
+            <option value="Permanent">Permanent</option>
             <option value="Stagiaire">Stagiaire</option>
           </select>
         </div>
@@ -120,11 +120,9 @@ export default function TravailleurForm({ travailleur, onSoumettre, onAnnuler })
               ? estModification
                 ? 'Recapture en cours...'
                 : 'Capture des traits faciaux en cours...'
-              : estModification
+              : form.signatureFaciale || estModification
                 ? 'Recapturer les traits faciaux'
-                : form.signatureFaciale
-                  ? 'Recapturer les traits faciaux'
-                  : 'Scanner les traits faciaux'}
+                : 'Scanner les traits faciaux'}
           </button>
 
           <div
@@ -139,7 +137,7 @@ export default function TravailleurForm({ travailleur, onSoumettre, onAnnuler })
         </div>
 
         <div className="flex gap-3 pt-2">
-          {estModification && (
+          {onAnnuler && (
             <button
               type="button"
               onClick={onAnnuler}
@@ -159,7 +157,7 @@ export default function TravailleurForm({ travailleur, onSoumettre, onAnnuler })
             <CheckCircle2 className="w-4 h-4" />
             {estModification
               ? 'Valider les modifications'
-              : 'Enregistrer le travailleur'}
+              : 'Enregistrer le bénéficiaire'}
           </button>
         </div>
       </form>

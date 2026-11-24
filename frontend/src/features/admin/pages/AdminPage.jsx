@@ -1,14 +1,14 @@
 import { useCallback, useState } from 'react';
 import useAdminAuth from '../hooks/useAdminAuth';
 import useComptes from '../hooks/useComptes';
-import useTravailleurs from '../hooks/useTravailleurs';
+import useBeneficiaires from '../hooks/useTravailleurs';
 import AdminLoginScreen from '../components/AdminLoginScreen';
 import AdminHeader from '../components/AdminHeader';
 import AdminSidebar from '../components/AdminSidebar';
 import ComptesListSection from '../components/ComptesListSection';
 import CompteForm from '../components/CompteForm';
-import TravailleursSection from '../components/TravailleursSection';
-import TravailleurForm from '../components/TravailleurForm';
+import BeneficiairesListe from '../components/TravailleursSection';
+import BeneficiaireForm from '../components/TravailleurForm';
 import DialogModal from '../components/DialogModal';
 
 const DIALOG_FERME = {
@@ -22,7 +22,7 @@ export default function AdminPage() {
   const { adminUser, login, logout } = useAdminAuth();
   const [sousPage, setSousPage] = useState('comptes-liste');
   const [editCompte, setEditCompte] = useState(null);
-  const [editTravailleur, setEditTravailleur] = useState(null);
+  const [editBeneficiaire, setEditBeneficiaire] = useState(null);
   const [dialog, setDialog] = useState(DIALOG_FERME);
 
   const afficherDialog = useCallback((type, titre, message) => {
@@ -30,7 +30,7 @@ export default function AdminPage() {
   }, []);
 
   const gestionComptes = useComptes(afficherDialog);
-  const gestionTravailleurs = useTravailleurs(afficherDialog);
+  const gestionBeneficiaires = useBeneficiaires(afficherDialog);
 
   if (!adminUser) {
     return <AdminLoginScreen onLogin={login} />;
@@ -49,17 +49,21 @@ export default function AdminPage() {
     if (gestionComptes.modifierCompte(values)) setSousPage('comptes-liste');
   };
 
-  const ouvrirModificationTravailleur = (trav) => {
-    setEditTravailleur({ ...trav });
-    setSousPage('travailleurs-modifier');
+  const ouvrirModificationBeneficiaire = (beneficiaire) => {
+    setEditBeneficiaire({ ...beneficiaire });
+    setSousPage('beneficiaires-modifier');
   };
 
-  const handleAjouterTravailleur = (values) => {
-    gestionTravailleurs.ajouterTravailleur(values);
+  const handleAjouterBeneficiaire = (values) => {
+    if (gestionBeneficiaires.ajouterBeneficiaire(values)) {
+      setSousPage('beneficiaires-liste');
+    }
   };
 
-  const handleModifierTravailleur = (values) => {
-    if (gestionTravailleurs.modifierTravailleur(values)) setSousPage('travailleurs');
+  const handleModifierBeneficiaire = (values) => {
+    if (gestionBeneficiaires.modifierBeneficiaire(values)) {
+      setSousPage('beneficiaires-liste');
+    }
   };
 
   const comptes = gestionComptes.comptes;
@@ -102,21 +106,32 @@ export default function AdminPage() {
             />
           )}
 
-          {sousPage === 'travailleurs' && (
-            <TravailleursSection
-              travailleurs={gestionTravailleurs.travailleurs}
-              onAjouter={handleAjouterTravailleur}
-              onModifier={ouvrirModificationTravailleur}
-              onSupprimer={gestionTravailleurs.supprimerTravailleur}
+          {sousPage === 'beneficiaires-creer' && (
+            <div className="max-w-3xl mx-auto">
+              <BeneficiaireForm
+                onSoumettre={handleAjouterBeneficiaire}
+                onAnnuler={() => setSousPage('beneficiaires-liste')}
+              />
+            </div>
+          )}
+
+          {sousPage === 'beneficiaires-liste' && (
+            <BeneficiairesListe
+              beneficiaires={gestionBeneficiaires.beneficiaires}
+              onAjouter={() => setSousPage('beneficiaires-creer')}
+              onModifier={ouvrirModificationBeneficiaire}
+              onSupprimer={gestionBeneficiaires.supprimerBeneficiaire}
             />
           )}
 
-          {sousPage === 'travailleurs-modifier' && editTravailleur && (
-            <TravailleurForm
-              travailleur={editTravailleur}
-              onSoumettre={handleModifierTravailleur}
-              onAnnuler={() => setSousPage('travailleurs')}
-            />
+          {sousPage === 'beneficiaires-modifier' && editBeneficiaire && (
+            <div className="max-w-3xl mx-auto">
+              <BeneficiaireForm
+                beneficiaire={editBeneficiaire}
+                onSoumettre={handleModifierBeneficiaire}
+                onAnnuler={() => setSousPage('beneficiaires-liste')}
+              />
+            </div>
           )}
         </main>
       </div>

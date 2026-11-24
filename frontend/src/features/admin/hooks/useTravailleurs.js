@@ -1,14 +1,65 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { normaliserMatricule } from '../utils';
 
-export default function useTravailleurs(notifier) {
-  const [travailleurs, setTravailleurs] = useState([]);
+const CLE_STOCKAGE = 'smartcaisse.beneficiaires';
 
-  const ajouterTravailleur = ({
+// Données de démonstration du module admin local (à retirer lors du branchement API).
+const BENEFICIAIRES_DEMO = [
+  {
+    id: 1,
+    matricule: 'SA7206',
+    nom: 'MAKOSSO',
+    prenom: 'Jean',
+    situation: 'Permanent',
+    signatureFaciale: 'FACE-482193-731205864',
+  },
+  {
+    id: 2,
+    matricule: 'SA7207',
+    nom: 'BOUSSOUKOU',
+    prenom: 'Marie',
+    situation: 'Stagiaire',
+    signatureFaciale: 'FACE-482194-518902347',
+  },
+  {
+    id: 3,
+    matricule: 'SA7208',
+    nom: 'NKOUNKOU',
+    prenom: 'Paul',
+    situation: 'Permanent',
+    signatureFaciale: 'FACE-482195-904317628',
+  },
+];
+
+function chargerBeneficiaires() {
+  try {
+    const brut = localStorage.getItem(CLE_STOCKAGE);
+    if (brut) {
+      const parsed = JSON.parse(brut);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // Stockage indisponible : on repart des données de démonstration.
+  }
+  return BENEFICIAIRES_DEMO;
+}
+
+export default function useBeneficiaires(notifier) {
+  const [beneficiaires, setBeneficiaires] = useState(chargerBeneficiaires);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLE_STOCKAGE, JSON.stringify(beneficiaires));
+    } catch {
+      // Stockage indisponible : les données restent en mémoire.
+    }
+  }, [beneficiaires]);
+
+  const ajouterBeneficiaire = ({
     matricule,
     nom,
     prenom,
-    statut,
+    situation,
     signatureFaciale,
   }) => {
     const matriculeFormate = normaliserMatricule((matricule || '').trim());
@@ -19,7 +70,7 @@ export default function useTravailleurs(notifier) {
       notifier(
         'erreur',
         'Champs obligatoires',
-        'Veuillez saisir le matricule (ex: SA7206), le nom et le prénom du travailleur.'
+        'Veuillez saisir le matricule (ex: SA7206), le nom et le prénom du bénéficiaire.'
       );
       return false;
     }
@@ -31,29 +82,37 @@ export default function useTravailleurs(notifier) {
       );
       return false;
     }
+    if (beneficiaires.some((b) => b.matricule === matriculeFormate)) {
+      notifier(
+        'erreur',
+        'Matricule déjà utilisé',
+        `Le matricule ${matriculeFormate} appartient déjà à un bénéficiaire.`
+      );
+      return false;
+    }
 
     const nouveau = {
       id: Date.now(),
       matricule: matriculeFormate,
       nom: nomPropre,
       prenom: prenomPropre,
-      statut,
+      situation,
       signatureFaciale,
     };
 
-    setTravailleurs([nouveau, ...travailleurs]);
+    setBeneficiaires((prev) => [nouveau, ...prev]);
     notifier(
       'succes',
-      'Travailleur enregistré',
-      `${nouveau.prenom} ${nouveau.nom} (${nouveau.matricule} • ${nouveau.statut}) a été enregistré avec sa signature faciale unique.`
+      'Bénéficiaire enregistré',
+      `${nouveau.prenom} ${nouveau.nom} (${nouveau.matricule} • ${nouveau.situation}) a été enregistré avec sa signature faciale unique.`
     );
     return true;
   };
 
-  const modifierTravailleur = (travailleur) => {
-    const matriculeFormate = normaliserMatricule((travailleur?.matricule || '').trim());
-    const nomPropre = (travailleur?.nom || '').trim().toUpperCase();
-    const prenomPropre = (travailleur?.prenom || '').trim();
+  const modifierBeneficiaire = (beneficiaire) => {
+    const matriculeFormate = normaliserMatricule((beneficiaire?.matricule || '').trim());
+    const nomPropre = (beneficiaire?.nom || '').trim().toUpperCase();
+    const prenomPropre = (beneficiaire?.prenom || '').trim();
 
     if (!matriculeFormate || !nomPropre || !prenomPropre) {
       notifier(
@@ -63,37 +122,54 @@ export default function useTravailleurs(notifier) {
       );
       return false;
     }
+    if (
+      beneficiaires.some(
+        (b) => b.id !== beneficiaire.id && b.matricule === matriculeFormate
+      )
+    ) {
+      notifier(
+        'erreur',
+        'Matricule déjà utilisé',
+        `Le matricule ${matriculeFormate} appartient déjà à un autre bénéficiaire.`
+      );
+      return false;
+    }
 
-    setTravailleurs((prev) =>
-      prev.map((t) =>
-        t.id === travailleur.id
+    setBeneficiaires((prev) =>
+      prev.map((b) =>
+        b.id === beneficiaire.id
           ? {
-              ...t,
+              ...b,
               matricule: matriculeFormate,
               nom: nomPropre,
               prenom: prenomPropre,
-              statut: travailleur.statut,
-              signatureFaciale: travailleur.signatureFaciale,
+              situation: beneficiaire.situation,
+              signatureFaciale: beneficiaire.signatureFaciale,
             }
-          : t
+          : b
       )
     );
     notifier(
       'succes',
-      'Travailleur modifié',
+      'Bénéficiaire modifié',
       `La fiche de ${prenomPropre} ${nomPropre} (${matriculeFormate}) a été mise à jour.`
     );
     return true;
   };
 
-  const supprimerTravailleur = (travailleur) => {
-    setTravailleurs((prev) => prev.filter((t) => t.id !== travailleur.id));
+  const supprimerBeneficiaire = (beneficiaire) => {
+    setBeneficiaires((prev) => prev.filter((b) => b.id !== beneficiaire.id));
     notifier(
       'succes',
-      'Travailleur supprimé',
-      `${travailleur.prenom} ${travailleur.nom} a été retiré de la liste.`
+      'Bénéficiaire supprimé',
+      `${beneficiaire.prenom} ${beneficiaire.nom} a été retiré de la liste.`
     );
   };
 
-  return { travailleurs, ajouterTravailleur, modifierTravailleur, supprimerTravailleur };
+  return {
+    beneficiaires,
+    ajouterBeneficiaire,
+    modifierBeneficiaire,
+    supprimerBeneficiaire,
+  };
 }

@@ -1,4 +1,4 @@
-import { ScanFace, UserPlus, Users } from 'lucide-react';
+import { UserPlus, Users } from 'lucide-react';
 
 const LIENS_COMPTES = [
   {
@@ -17,45 +17,63 @@ const LIENS_COMPTES = [
   },
 ];
 
-export default function AdminSidebar({ sousPage, onChangeSousPage }) {
-  return (
-    <aside className="w-full md:w-72 bg-slate-900 border-r border-slate-800 p-6 space-y-6">
-      <div className="space-y-2">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block px-3">
-          Gestion des Comptes
-        </span>
-        {LIENS_COMPTES.map(({ id, label, Icon, actif, couleur }) => (
-          <button
-            key={id}
-            onClick={() => onChangeSousPage(id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
-              actif.includes(sousPage)
-                ? `${couleur} text-white`
-                : 'text-slate-300 hover:bg-slate-800'
-            }`}
-          >
-            <Icon className="w-4 h-4" />
-            {label}
-          </button>
-        ))}
-      </div>
+const LIENS_BENEFICIAIRES = [
+  {
+    id: 'beneficiaires-liste',
+    label: 'Listes des bénéficiaires',
+    Icon: Users,
+    actif: ['beneficiaires-liste', 'beneficiaires-modifier'],
+    couleur: 'bg-blue-600',
+  },
+  {
+    id: 'beneficiaires-creer',
+    label: 'Créer un nouveau bénéficiaire',
+    Icon: UserPlus,
+    actif: ['beneficiaires-creer'],
+    couleur: 'bg-blue-600',
+  },
+];
 
-      <div className="space-y-2 pt-4 border-t border-slate-800">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block px-3">
-          Personnel Client SIAT
-        </span>
+function GroupeLiens({ titre, liens, sousPage, onChangeSousPage, avecBordure }) {
+  return (
+    <div className={`space-y-2 ${avecBordure ? 'pt-4 border-t border-slate-800' : ''}`}>
+      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block px-3">
+        {titre}
+      </span>
+      {liens.map(({ id, label, Icon, actif, couleur }) => (
         <button
-          onClick={() => onChangeSousPage('travailleurs')}
+          key={id}
+          onClick={() => onChangeSousPage(id)}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
-            ['travailleurs', 'travailleurs-modifier'].includes(sousPage)
-              ? 'bg-blue-600 text-white'
+            actif.includes(sousPage)
+              ? `${couleur} text-white`
               : 'text-slate-300 hover:bg-slate-800'
           }`}
         >
-          <ScanFace className="w-4 h-4" />
-          Gestion des travailleurs
+          <Icon className="w-4 h-4" />
+          {label}
         </button>
-      </div>
+      ))}
+    </div>
+  );
+}
+
+export default function AdminSidebar({ sousPage, onChangeSousPage }) {
+  return (
+    <aside className="w-full md:w-72 bg-slate-900 border-r border-slate-800 p-6 space-y-6">
+      <GroupeLiens
+        titre="Gestion des Comptes"
+        liens={LIENS_COMPTES}
+        sousPage={sousPage}
+        onChangeSousPage={onChangeSousPage}
+      />
+      <GroupeLiens
+        titre="Gestion des bénéficiaires"
+        liens={LIENS_BENEFICIAIRES}
+        sousPage={sousPage}
+        onChangeSousPage={onChangeSousPage}
+        avecBordure
+      />
     </aside>
   );
 }
