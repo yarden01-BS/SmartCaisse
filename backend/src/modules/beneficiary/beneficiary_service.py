@@ -34,15 +34,18 @@ def _to_response(beneficiary: Beneficiary) -> BeneficiaryResponse:
 async def create(session: AsyncSession, data: BeneficiaryCreate) -> BeneficiaryResponse:
     """Crée un nouveau bénéficiaire actif."""
     repository = BeneficiaryRepository(session)
-    if await repository.get_by_matricule(data.matricule) is not None:
+    matricule = data.matricule.strip().upper() if data.matricule else None
+    if matricule is None:
+        matricule = await repository.next_matricule()
+    elif await repository.get_by_matricule(matricule) is not None:
         raise MatriculeAlreadyExistsError(
-            f"Matricule {data.matricule} is already in use"
+            f"Matricule {matricule} is already in use"
         )
 
     beneficiary = Beneficiary(
         first_name=data.first_name,
         last_name=data.last_name,
-        matricule=data.matricule,
+        matricule=matricule,
         profession=data.profession,
         situation=data.situation,
         is_active=True,

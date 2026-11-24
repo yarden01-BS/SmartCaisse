@@ -24,6 +24,17 @@ class BeneficiaryRepository(BaseRepository[Beneficiary]):
         )
         return result.scalars().first()
 
+    async def next_matricule(self) -> str:
+        """Génère le prochain matricule au format SIAT-XXX."""
+        result = await self._session.execute(select(Beneficiary.matricule))
+        max_number = 0
+        for (matricule,) in result.all():
+            if matricule and matricule.startswith("SIAT-"):
+                suffix = matricule.removeprefix("SIAT-")
+                if suffix.isdigit():
+                    max_number = max(max_number, int(suffix))
+        return f"SIAT-{max_number + 1:03d}"
+
     async def list_all(
         self, sort: BeneficiarySort, is_active: bool | None
     ) -> list[Beneficiary]:
