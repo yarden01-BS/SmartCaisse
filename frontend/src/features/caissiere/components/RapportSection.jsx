@@ -1,26 +1,40 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mail } from 'lucide-react';
-import { agregerParTravailleur, aujourdhuiStr, moisActuelStr } from '../utils';
+import { formaterRapport, getRapport } from '../api';
+import { aujourdhuiStr, moisActuelStr } from '../utils';
 import RapportTable from './RapportTable';
 import RapportChart from './RapportChart';
 import EmailModal from './EmailModal';
 
-export default function RapportSection({ commandes }) {
+export default function RapportSection() {
   const [periode, setPeriode] = useState('jour');
+  const [rapport, setRapport] = useState(null);
+  const [periodeChargee, setPeriodeChargee] = useState(null);
+  const [erreur, setErreur] = useState('');
   const [showEmail, setShowEmail] = useState(false);
 
-  const commandesPeriode = commandes.filter((c) =>
-    c.date.startsWith(periode === 'jour' ? aujourdhuiStr : moisActuelStr)
-  );
+  const chargement = periodeChargee !== periode;
 
-  const totaux = {
-    nbBons: commandesPeriode.length,
-    ventes: commandesPeriode.reduce((acc, c) => acc + c.prixTotal, 0),
-    client: commandesPeriode.reduce((acc, c) => acc + c.partClient, 0),
-    siat: commandesPeriode.reduce((acc, c) => acc + c.partEntreprise, 0),
-  };
+  useEffect(() => {
+    let actif = true;
 
-  const lignes = agregerParTravailleur(commandesPeriode);
+    getRapport(periode)
+      .then((donnees) => {
+        if (!actif) return;
+        setRapport(donnees);
+        setPeriodeChargee(periode);
+        setErreur('');
+      })
+      .catch((error) => {
+        if (actif) setErreur(error.message);
+      });
+
+    return () => {
+      actif = false;
+    };
+  }, [periode]);
+
+  const { totaux, lignes } = formaterRapport(rapport);
 
   const libellePeriode =
     periode === 'jour' ? `Journée du ${aujourdhuiStr}` : `Mois de ${moisActuelStr}`;
@@ -40,6 +54,8 @@ export default function RapportSection({ commandes }) {
           <p className="text-sm text-slate-400">
             Détail nominal par employé et cumul global (Plafond SIAT : 1 000 FCFA)
           </p>
+          {chargement && <p className="text-xs text-slate-400 mt-2">Chargement du rapport...</p>}
+          {erreur && <p className="text-xs text-red-400 mt-2">{erreur}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
@@ -49,7 +65,10 @@ export default function RapportSection({ commandes }) {
             ].map(({ id, label }) => (
               <button
                 key={id}
-                onClick={() => setPeriode(id)}
+                onClick={() => {
+                  setErreur('');
+                  setPeriode(id);
+                }}
                 className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                   periode === id ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}

@@ -1,6 +1,6 @@
 import { FileText, Receipt } from 'lucide-react';
 
-export default function HistoriqueBons({ commandes, onOuvrirBon }) {
+export default function HistoriqueBons({ commandes, chargement, erreur, onOuvrirBon }) {
   return (
     <section className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col max-h-[750px]">
       <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -9,10 +9,18 @@ export default function HistoriqueBons({ commandes, onOuvrirBon }) {
       </h2>
       <span className="text-xs text-slate-400 mb-3">{commandes.length} bon(s) enregistré(s)</span>
 
+      {erreur && <p className="text-xs text-red-400 mb-3">{erreur}</p>}
+      {chargement && <p className="text-xs text-slate-400 mb-3">Chargement des bons...</p>}
+
       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+        {!chargement && commandes.length === 0 && !erreur && (
+          <p className="text-xs text-slate-500 italic text-center py-6">
+            Aucun bon enregistré pour ce caissier.
+          </p>
+        )}
         {commandes.map((cmd) => (
           <div
-            key={cmd.numBon}
+            key={cmd.id}
             className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col gap-2.5 text-xs"
           >
             <div className="flex justify-between items-center text-slate-400">

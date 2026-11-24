@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import useCommandes from '../hooks/useCommandes';
-import { personnelMock } from '../mockData';
-import { logout, restoreSession } from '../api';
+import { getBeneficiaires, logout, restoreSession } from '../api';
 import LoginScreen from '../components/LoginScreen';
 import CaisseHeader from '../components/CaisseHeader';
 import CommandeSection from '../components/CommandeSection';
@@ -14,7 +13,31 @@ export default function CaissePage() {
   const [chargement, setChargement] = useState(true);
   const [section, setSection] = useState('commande'); // 'commande' | 'rapport' | 'profil'
   const [bonPdf, setBonPdf] = useState(null);
-  const { commandes, ajouterCommande } = useCommandes();
+  const [personnel, setPersonnel] = useState([]);
+  const [erreurPersonnel, setErreurPersonnel] = useState('');
+  const {
+    commandes,
+    chargement: chargementCommandes,
+    erreur: erreurCommandes,
+    ajouterCommande,
+  } = useCommandes(Boolean(caissiere));
+
+  useEffect(() => {
+    if (!caissiere) return undefined;
+    let actif = true;
+
+    getBeneficiaires()
+      .then((liste) => {
+        if (actif) setPersonnel(liste);
+      })
+      .catch((error) => {
+        if (actif) setErreurPersonnel(error.message);
+      });
+
+    return () => {
+      actif = false;
+    };
+  }, [caissiere]);
 
   useEffect(() => {
     let actif = true;
@@ -63,14 +86,16 @@ export default function CaissePage() {
 
       {section === 'commande' && (
         <CommandeSection
-          personnel={personnelMock}
+          personnel={personnel}
           commandes={commandes}
-          caissiereNom={caissiere.nom}
+          chargement={chargementCommandes}
+          erreur={erreurCommandes}
+          erreurPersonnel={erreurPersonnel}
           onAjouterCommande={ajouterCommande}
           onOuvrirBon={setBonPdf}
         />
       )}
-      {section === 'rapport' && <RapportSection commandes={commandes} />}
+      {section === 'rapport' && <RapportSection />}
       {section === 'profil' && (
         <ProfilSection caissiere={caissiere} onLogout={handleLogout} />
       )}

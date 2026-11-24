@@ -15,7 +15,6 @@ from src.db.models import (
     FaceEmbedding,
     PurchaseOrder,
     Report,
-    ReportType,
     Situation,
     Transaction,
 )
@@ -33,21 +32,22 @@ fake = Faker()
 
 
 def make_face_embedding() -> list[float]:
-    """Faker n'a pas de fournisseur de vecteurs, donc on construit directement un plongement de 512 dimensions."""
+    """Faker n'a pas de vecteurs : on construit un plongement de 512 dimensions."""
     return [round(random.random(), 6) for _ in range(512)]
 
 
 async def seed() -> None:
-    """Remplit toutes les tables avec des données fictives mais cohérentes sur le plan relationnel."""
+    """Remplit les tables avec des données fictives relationnellement cohérentes."""
     fake.seed_instance(42)
     random.seed(42)
 
     async with SessionLocal() as session:
         beneficiaries: list[Beneficiary] = []
-        for _ in range(BENEFICIARY_COUNT):
+        for index in range(BENEFICIARY_COUNT):
             beneficiary = Beneficiary(
                 first_name=fake.first_name(),
                 last_name=fake.last_name(),
+                matricule=f"SIAT-{index + 1:03d}",
                 profession=fake.job(),
                 situation=random.choice(list(Situation)),
                 is_active=True
@@ -101,7 +101,6 @@ async def seed() -> None:
             order = PurchaseOrder(
                 beneficiary_id=random.choice(beneficiaries).id,
                 account_id=random.choice(cashier_accounts).id,
-                order_number=fake.unique.bothify(text="PO-#####"),
                 amount=round(random.uniform(2, 25), 2),
             )
             session.add(order)
@@ -110,20 +109,13 @@ async def seed() -> None:
             session.add(
                 Transaction(
                     purchase_order_id=order.id,
-                    account_id=order.account_id,
                     company_share=random.randint(1, 8),
                     customer_share=random.randint(1, 5),
                 )
             )
 
         for _ in range(REPORT_COUNT):
-            session.add(
-                Report(
-                    account_id=random.choice(cashier_accounts).id,
-                    type=random.choice(list(ReportType)),
-                    period=fake.date_between(start_date="-30d", end_date="today"),
-                )
-            )
+            session.add(Report(account_id=random.choice(cashier_accounts).id))
 
         await session.commit()
 

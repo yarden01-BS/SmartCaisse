@@ -1,26 +1,43 @@
-import { useState } from 'react';
-import { commandesInitiales } from '../mockData';
+import { useCallback, useEffect, useState } from 'react';
+import { creerBon, getBons, payerBon } from '../api';
 
-export default function useCommandes() {
-  const [commandes, setCommandes] = useState(commandesInitiales);
+export default function useCommandes(actif = false) {
+  const [commandes, setCommandes] = useState([]);
+  const [charge, setCharge] = useState(false);
+  const [erreur, setErreur] = useState('');
 
-  const ajouterCommande = ({ client, prixTotal, partEntreprise, partClient, caissiereNom }) => {
-    const maintenant = new Date();
-    const date = `${maintenant.toISOString().slice(0, 10)} ${maintenant.toTimeString().slice(0, 5)}`;
+  const chargement = actif && !charge;
 
-    const nouveauBon = {
-      numBon: commandes.length + 1,
-      date,
-      client,
-      prixTotal,
-      partEntreprise,
-      partClient,
-      caissiereNom,
-    };
+  const recharger = useCallback(() => {
+    return getBons()
+      .then((bons) => {
+        setCommandes(bons);
+        setErreur('');
+        setCharge(true);
+        return bons;
+      })
+      .catch((error) => {
+        setErreur(error.message);
+        setCharge(true);
+        return [];
+      });
+  }, []);
 
-    setCommandes([nouveauBon, ...commandes]);
-    return nouveauBon;
+  useEffect(() => {
+    if (actif) recharger();
+  }, [actif, recharger]);
+
+  const ajouterCommande = async ({ client, prixTotal }) => {
+    const order = await creerBon({
+      beneficiaryId: client.id,
+      amount: prixTotal,
+    });
+    await payerBon(order.id);
+    const bons = await recharger();
+    const bon = bons.find((item) => item.id === order.id);
+    if (!bon) throw new Error('Bon enregistré mais introuvable dans la liste.');
+    return bon;
   };
 
-  return { commandes, ajouterCommande };
+  return { commandes, chargement, erreur, recharger, ajouterCommande };
 }

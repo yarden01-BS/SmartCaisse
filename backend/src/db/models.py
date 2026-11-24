@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 from enum import Enum
 
 from pgvector.sqlalchemy import Vector
@@ -34,11 +34,6 @@ class Situation(Enum):
     STAGIAIRE = "stagiare"
 
 
-class ReportType(Enum):
-    DAILY = "daily"
-    MONTHLY = "monthly"
-
-
 class AccountType(Enum):
     ADMIN = "admin"
     CASHIER = "cashier"
@@ -50,6 +45,7 @@ class Beneficiary(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str]
     last_name: Mapped[str]
+    matricule: Mapped[str] = mapped_column(unique=True)
     profession: Mapped[str]
     is_active: Mapped[bool] = mapped_column(default=True)
     situation: Mapped[Situation] = mapped_column(
@@ -133,7 +129,6 @@ class Account(Base):
     purchase_orders: Mapped[list[PurchaseOrder]] = relationship(
         back_populates="account"
     )
-    transactions: Mapped[list[Transaction]] = relationship(back_populates="account")
     reports: Mapped[list[Report]] = relationship(back_populates="account")
     __table_args__ = (
         CheckConstraint(
@@ -144,7 +139,7 @@ class Account(Base):
 
 
 class RevokedToken(Base):
-    """Identifiants des jetons d'actualisation révoqués lors de la déconnexion ou de la rotation."""
+    """Identifiants des jetons révoqués lors de la déconnexion ou de la rotation."""
 
     __tablename__ = "revoked_tokens"
 
@@ -167,7 +162,6 @@ class PurchaseOrder(Base):
     order_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    order_number: Mapped[str]
     amount: Mapped[float]
 
     beneficiary: Mapped[Beneficiary] = relationship(
@@ -185,7 +179,6 @@ class Transaction(Base):
     __tablename__ = "transactions"
     id: Mapped[int] = mapped_column(primary_key=True)
     purchase_order_id: Mapped[int] = mapped_column(ForeignKey("purchase_orders.id"))
-    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
     company_share: Mapped[int]
     customer_share: Mapped[int]
     created_at: Mapped[datetime] = mapped_column(
@@ -194,20 +187,10 @@ class Transaction(Base):
     purchase_order: Mapped[PurchaseOrder] = relationship(
         back_populates="transaction", uselist=False
     )
-    account: Mapped[Account] = relationship(
-        back_populates="transactions", uselist=False
-    )
 
 
 class Report(Base):
     __tablename__ = "reports"
     id: Mapped[int] = mapped_column(primary_key=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
-    type: Mapped[ReportType] = mapped_column(
-        SQEnum(ReportType, name="report_type", values_callable=enum_values)
-    )
-    period: Mapped[date]
-    sent_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
     account: Mapped[Account] = relationship(back_populates="reports", uselist=False)

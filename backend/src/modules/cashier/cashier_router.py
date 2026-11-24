@@ -7,9 +7,12 @@ from ...db.session import get_session
 from ..auth.auth_deps import get_current_account_id, require_cashier
 from . import cashier_service
 from .cashier_schemas import (
+    CashierBeneficiaryResponse,
+    CashierOrderResponse,
     CashierReport,
     PurchaseOrderCreate,
     PurchaseOrderResponse,
+    ReportPeriodFilter,
     TransactionResponse,
 )
 
@@ -18,6 +21,23 @@ router = APIRouter(
     tags=["cashier"],
     dependencies=[Depends(require_cashier)],
 )
+
+
+@router.get("/beneficiaries", response_model=list[CashierBeneficiaryResponse])
+async def list_beneficiaries(
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> list[CashierBeneficiaryResponse]:
+    """Liste les bénéficiaires actifs que le caissier peut servir."""
+    return await cashier_service.list_beneficiaries(session)
+
+
+@router.get("/purchase-orders", response_model=list[CashierOrderResponse])
+async def list_purchase_orders(
+    cashier_id: int = Depends(get_current_account_id),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> list[CashierOrderResponse]:
+    """Renvoie les bons de commande enregistrés par le caissier connecté."""
+    return await cashier_service.list_orders(session, cashier_id)
 
 
 @router.post(
@@ -49,7 +69,7 @@ async def perform_transaction(
     cashier_id: int = Depends(get_current_account_id),
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> TransactionResponse:
-    """Paie une commande et enregistre la répartition de la subvention entreprise/client."""
+    """Paie une commande et répartit la subvention entreprise/client."""
     try:
         return await cashier_service.perform_transaction(session, cashier_id, order_id)
     except cashier_service.PurchaseOrderNotFoundError as exc:
@@ -64,8 +84,9 @@ async def perform_transaction(
 
 @router.get("/reports", response_model=CashierReport)
 async def get_report(
+    period: ReportPeriodFilter = "all",
     cashier_id: int = Depends(get_current_account_id),
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> CashierReport:
-    """Renvoie les totaux perçus, payés par le client et pris en charge par l'entreprise."""
-    return await cashier_service.get_report(session, cashier_id)
+    """Renvoie les totaux et la répartition par jour et par bénéficiaire."""
+    return await cashier_service.get_report(session, cashier_id, period)

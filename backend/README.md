@@ -286,6 +286,7 @@ Corps de création :
 {
   "first_name": "Jane",
   "last_name": "Doe",
+  "matricule": "SIAT-013",
   "profession": "Teacher",
   "situation": "permanent"
 }
@@ -298,6 +299,7 @@ Corps de création :
   "id": 13,
   "first_name": "Jane",
   "last_name": "Doe",
+  "matricule": "SIAT-013",
   "profession": "Teacher",
   "situation": "permanent",
   "is_active": true,
@@ -305,7 +307,7 @@ Corps de création :
 }
 ```
 
-La modification accepte n'importe quel sous-ensemble de `first_name`, `last_name`, `profession` et `situation`. Un identifiant inconnu renvoie `404`. La suspension conserve les données et ne fait que basculer `is_active`.
+`matricule` identifie l'employé de façon unique ; un doublon renvoie `409`. La modification accepte n'importe quel sous-ensemble de `first_name`, `last_name`, `profession` et `situation`. Un identifiant inconnu renvoie `404`. La suspension conserve les données et ne fait que basculer `is_active`.
 
 ### Lister les employés
 
@@ -333,9 +335,11 @@ Ces routes sont accessibles **uniquement aux comptes caissiers**. Elles exigent 
 
 | Méthode | Chemin | Description |
 |---|---|---|
+| `GET` | `/cashier/beneficiaries` | Lister les bénéficiaires actifs proposés au caissier. |
+| `GET` | `/cashier/purchase-orders` | Lister les bons du caissier avec leur bénéficiaire et leur paiement éventuel. |
 | `POST` | `/cashier/purchase-orders` | Enregistrer un bon de commande remis par un bénéficiaire. |
 | `POST` | `/cashier/purchase-orders/{id}/transactions` | Effectuer le paiement et enregistrer la répartition de la subvention. |
-| `GET` | `/cashier/reports` | Renvoyer la ventilation comptable des transactions du caissier. |
+| `GET` | `/cashier/reports` | Renvoyer la ventilation comptable par jour et par bénéficiaire. |
 
 ### Règles de subvention
 
@@ -358,7 +362,6 @@ Ces routes sont accessibles **uniquement aux comptes caissiers**. Elles exigent 
 ```json
 {
   "beneficiary_id": 16,
-  "order_number": "PO-00042",
   "amount": 2500
 }
 ```
@@ -370,7 +373,6 @@ Réponse (`201`) :
   "id": 41,
   "beneficiary_id": 16,
   "account_id": 25,
-  "order_number": "PO-00042",
   "amount": 2500.0,
   "order_date": "2026-11-20T10:30:00Z"
 }
@@ -388,7 +390,6 @@ Réponse (`201`) :
 {
   "id": 9,
   "purchase_order_id": 41,
-  "order_number": "PO-00042",
   "beneficiary_id": 16,
   "account_id": 25,
   "total_amount": 2500,
@@ -402,7 +403,7 @@ Une commande inconnue renvoie `404`. Payer deux fois la même commande renvoie `
 
 ### 3. Traçabilité comptable
 
-`GET /cashier/reports` agrège les transactions enregistrées du caissier par jour. Chaque ligne et les totaux généraux séparent explicitement les montants :
+`GET /cashier/reports` agrège les transactions enregistrées du caissier par jour et par bénéficiaire. Le paramètre `period` accepte `all` (défaut), `daily` (aujourd'hui) et `monthly` (mois en cours). Chaque ligne et les totaux généraux séparent explicitement les montants :
 
 ```json
 {
@@ -418,13 +419,27 @@ Une commande inconnue renvoie `404`. Payer deux fois la même commande renvoie `
       "customer_share": 1500,
       "company_share": 1000
     }
+  ],
+  "beneficiaries": [
+    {
+      "beneficiary_id": 16,
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "matricule": "SIAT-016",
+      "profession": "Teacher",
+      "situation": "permanent",
+      "transaction_count": 1,
+      "total_amount": 2500,
+      "customer_share": 1500,
+      "company_share": 1000
+    }
   ]
 }
 ```
 
 ## Base de données
 
-Les opérations sont réalisées avec SQLAlchemy en asynchrone. Alembic gère les migrations de schéma et Docker héberge PostgreSQL. La table `revoked_tokens` conserve les identifiants `jti` des jetons de rafraîchissement révoqués.
+Les opérations sont réalisées avec SQLAlchemy en asynchrone. Alembic gère les migrations de schéma et Docker héberge PostgreSQL. La table `revoked_tokens` conserve les identifiants `jti` des jetons de rafraîchissement révoqués. Le caissier d'une transaction est déduit de son bon de commande (`purchase_orders.account_id`) : la table `transactions` ne duplique pas cette information, et la table `reports` ne conserve que l'identifiant du compte. Le matricule est stocké dans `beneficiaries.matricule` (unique) et les bons sont identifiés par leur `id` : `purchase_orders.order_number` a été supprimé.
 
 ## Commandes utiles
 

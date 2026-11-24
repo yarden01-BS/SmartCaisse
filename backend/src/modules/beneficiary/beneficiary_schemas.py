@@ -13,6 +13,7 @@ BeneficiarySort = Literal["old", "recent"]
 class BeneficiaryCreate(BaseModel):
     first_name: str = Field(min_length=1)
     last_name: str = Field(min_length=1)
+    matricule: str = Field(min_length=1)
     profession: str = Field(min_length=1)
     situation: Situation
 
@@ -30,6 +31,7 @@ class BeneficiaryResponse(BaseModel):
     id: int
     first_name: str
     last_name: str
+    matricule: str
     profession: str
     situation: Situation
     is_active: bool

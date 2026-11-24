@@ -9,13 +9,17 @@ import HistoriqueBons from './HistoriqueBons';
 export default function CommandeSection({
   personnel,
   commandes,
-  caissiereNom,
+  chargement,
+  erreur,
+  erreurPersonnel,
   onAjouterCommande,
   onOuvrirBon,
 }) {
   const [client, setClient] = useState(null);
   const [montantInput, setMontantInput] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
+  const [statusErreur, setStatusErreur] = useState(false);
+  const [enCours, setEnCours] = useState(false);
   const face = useFaceVerification();
 
   const { partEntreprise, partClient } = calculerRepartitionSiat(montantInput);
@@ -26,24 +30,29 @@ export default function CommandeSection({
     face.reset();
   };
 
-  const handleValider = (e) => {
+  const handleValider = async (e) => {
     e.preventDefault();
     const montant = parseFloat(montantInput);
-    if (!face.visageReconnu || !client || isNaN(montant) || montant <= 0) return;
+    if (!face.visageReconnu || !client || isNaN(montant) || montant <= 0 || enCours) {
+      return;
+    }
 
-    const bon = onAjouterCommande({
-      client,
-      prixTotal: montant,
-      partEntreprise,
-      partClient,
-      caissiereNom,
-    });
-
-    setMontantInput('');
-    face.reset();
-    setStatusMessage(
-      `Bon N°${bon.numBon} validé pour ${client.nom} ! Client : ${partClient.toLocaleString()} FCFA | SIAT : ${partEntreprise.toLocaleString()} FCFA`
-    );
+    setEnCours(true);
+    setStatusMessage('');
+    try {
+      const bon = await onAjouterCommande({ client, prixTotal: montant });
+      setMontantInput('');
+      face.reset();
+      setStatusErreur(false);
+      setStatusMessage(
+        `Bon ${bon.numBon} validé pour ${client.nom} ! Client : ${partClient.toLocaleString()} FCFA | SIAT : ${partEntreprise.toLocaleString()} FCFA`
+      );
+    } catch (error) {
+      setStatusErreur(true);
+      setStatusMessage(error.message || "Impossible d'enregistrer le bon.");
+    } finally {
+      setEnCours(false);
+    }
   };
 
   return (
@@ -53,6 +62,12 @@ export default function CommandeSection({
           <Receipt className="w-5 h-5 text-blue-400" />
           Saisie d'une Commande
         </h2>
+
+        {(chargement || erreurPersonnel) && (
+          <p className={`text-xs mb-3 ${erreurPersonnel ? 'text-red-400' : 'text-slate-400'}`}>
+            {erreurPersonnel || 'Chargement des bénéficiaires...'}
+          </p>
+        )}
 
         <form onSubmit={handleValider} className="flex-1 flex flex-col gap-5">
           <ClientSelect personnel={personnel} value={client} onChange={handleChoisirClient} />
@@ -91,22 +106,33 @@ export default function CommandeSection({
 
           <button
             type="submit"
-            disabled={!face.visageReconnu || !montantInput}
+            disabled={!face.visageReconnu || !montantInput || enCours}
             className="mt-auto w-full py-3.5 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-emerald-600 hover:bg-emerald-500 text-white disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed cursor-pointer"
           >
             <CheckCircle2 className="w-5 h-5" />
-            Valider le Bon de Commande
+            {enCours ? 'Enregistrement en cours...' : 'Valider le Bon de Commande'}
           </button>
 
           {statusMessage && (
-            <div className="bg-emerald-950/50 border border-emerald-500/30 text-emerald-300 text-xs p-3 rounded-xl text-center">
+            <div
+              className={`text-xs p-3 rounded-xl text-center ${
+                statusErreur
+                  ? 'bg-red-950/50 border border-red-500/30 text-red-300'
+                  : 'bg-emerald-950/50 border border-emerald-500/30 text-emerald-300'
+              }`}
+            >
               {statusMessage}
             </div>
           )}
         </form>
       </section>
 
-      <HistoriqueBons commandes={commandes} onOuvrirBon={onOuvrirBon} />
+      <HistoriqueBons
+        commandes={commandes}
+        chargement={chargement}
+        erreur={erreur}
+        onOuvrirBon={onOuvrirBon}
+      />
     </main>
   );
 }

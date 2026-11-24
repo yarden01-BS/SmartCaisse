@@ -11,31 +11,6 @@ export function calculerRepartitionSiat(montantTotal) {
   return { partEntreprise, partClient };
 }
 
-// Regroupe les bons par travailleur, trié par total décroissant
-export function agregerParTravailleur(commandes) {
-  const map = {};
-  commandes.forEach((cmd) => {
-    const key = cmd.client.matricule || cmd.client.nom;
-    if (!map[key]) {
-      map[key] = {
-        matricule: cmd.client.matricule,
-        nom: cmd.client.nom,
-        statut: cmd.client.statut,
-        service: cmd.client.service,
-        total: 0,
-        client: 0,
-        siat: 0,
-        nbBons: 0,
-      };
-    }
-    map[key].total += cmd.prixTotal;
-    map[key].client += cmd.partClient;
-    map[key].siat += cmd.partEntreprise;
-    map[key].nbBons += 1;
-  });
-  return Object.values(map).sort((a, b) => b.total - a.total);
-}
-
 export function imprimerBonPdf(bon, caissiereNom = bon.caissiereNom || '') {
   const fenetre = window.open("", "_blank", "width=450,height=650");
   if (!fenetre) return;

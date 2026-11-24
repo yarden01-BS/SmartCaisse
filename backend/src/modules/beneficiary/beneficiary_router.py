@@ -30,7 +30,7 @@ async def list_beneficiaries(
     is_active: bool | None = None,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> list[BeneficiaryResponse]:
-    """Liste les employés (bénéficiaires), les plus anciens/récents en premier et éventuellement par statut."""
+    """Liste les employés, les plus anciens/récents en premier et filtrés par statut."""
     return await beneficiary_service.list_all(session, sort, is_active)
 
 
@@ -42,7 +42,12 @@ async def create_beneficiary(
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> BeneficiaryResponse:
     """Crée un bénéficiaire."""
-    return await beneficiary_service.create(session, data)
+    try:
+        return await beneficiary_service.create(session, data)
+    except beneficiary_service.MatriculeAlreadyExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
 
 
 @router.patch("/{beneficiary_id}", response_model=BeneficiaryResponse)

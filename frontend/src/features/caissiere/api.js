@@ -69,6 +69,69 @@ function toCashier(user) {
   };
 }
 
+function statut(situation) {
+  return situation === 'stagiare' ? 'Stagiaire' : 'Travailleur';
+}
+
+function dateHeure(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const deuxChiffres = (valeur) => String(valeur).padStart(2, '0');
+  return `${date.getFullYear()}-${deuxChiffres(date.getMonth() + 1)}-${deuxChiffres(date.getDate())} ${deuxChiffres(date.getHours())}:${deuxChiffres(date.getMinutes())}`;
+}
+
+function formaterClient(beneficiaire) {
+  return {
+    id: beneficiaire.id,
+    matricule: beneficiaire.matricule,
+    nom: `${beneficiaire.first_name} ${beneficiaire.last_name}`.trim(),
+    statut: statut(beneficiaire.situation),
+    service: beneficiaire.profession,
+  };
+}
+
+export function formaterBon(order) {
+  const transaction = order.transaction;
+  return {
+    id: order.id,
+    numBon: String(order.id),
+    date: dateHeure(order.order_date),
+    client: formaterClient(order.beneficiary),
+    prixTotal: order.amount,
+    partEntreprise: transaction?.company_share ?? 0,
+    partClient: transaction?.customer_share ?? 0,
+    paye: Boolean(transaction),
+  };
+}
+
+export function formaterRapport(rapport) {
+  if (!rapport) {
+    return {
+      totaux: { nbBons: 0, ventes: 0, client: 0, siat: 0 },
+      lignes: [],
+    };
+  }
+
+  return {
+    totaux: {
+      nbBons: rapport.transaction_count,
+      ventes: rapport.total_amount,
+      client: rapport.customer_share,
+      siat: rapport.company_share,
+    },
+    lignes: rapport.beneficiaries.map((beneficiaire) => ({
+      matricule: beneficiaire.matricule,
+      nom: `${beneficiaire.first_name} ${beneficiaire.last_name}`.trim(),
+      statut: statut(beneficiaire.situation),
+      service: beneficiaire.profession,
+      nbBons: beneficiaire.transaction_count,
+      total: beneficiaire.total_amount,
+      client: beneficiaire.customer_share,
+      siat: beneficiaire.company_share,
+    })),
+  };
+}
+
 export async function login(email, password) {
   let result;
   try {
@@ -118,4 +181,41 @@ export async function logout() {
   } finally {
     clearAccessToken();
   }
+}
+
+export async function getBeneficiaires() {
+  const beneficiaires = await apiRequest('/cashier/beneficiaries', {
+    authenticated: true,
+  });
+  return beneficiaires.map(formaterClient);
+}
+
+export async function getBons() {
+  const bons = await apiRequest('/cashier/purchase-orders', {
+    authenticated: true,
+  });
+  return bons.map(formaterBon);
+}
+
+export async function creerBon({ beneficiaryId, amount }) {
+  return apiRequest('/cashier/purchase-orders', {
+    method: 'POST',
+    authenticated: true,
+    body: {
+      beneficiary_id: beneficiaryId,
+      amount,
+    },
+  });
+}
+
+export async function payerBon(orderId) {
+  return apiRequest(`/cashier/purchase-orders/${orderId}/transactions`, {
+    method: 'POST',
+    authenticated: true,
+  });
+}
+
+export async function getRapport(periode) {
+  const valeur = periode === 'jour' ? 'daily' : 'monthly';
+  return apiRequest(`/cashier/reports?period=${valeur}`, { authenticated: true });
 }

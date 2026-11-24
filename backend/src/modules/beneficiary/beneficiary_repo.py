@@ -18,10 +18,16 @@ class BeneficiaryRepository(BaseRepository[Beneficiary]):
         )
         return result.scalars().first()
 
+    async def get_by_matricule(self, matricule: str) -> Beneficiary | None:
+        result = await self._session.execute(
+            select(Beneficiary).where(Beneficiary.matricule == matricule)
+        )
+        return result.scalars().first()
+
     async def list_all(
         self, sort: BeneficiarySort, is_active: bool | None
     ) -> list[Beneficiary]:
-        """Liste les bénéficiaires, éventuellement filtrés par statut et triés par date de création."""
+        """Liste les bénéficiaires, filtrés par statut et triés par date de création."""
         query = select(Beneficiary)
         if is_active is not None:
             query = query.where(Beneficiary.is_active == is_active)

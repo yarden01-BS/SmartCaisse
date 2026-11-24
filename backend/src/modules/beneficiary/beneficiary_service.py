@@ -16,6 +16,10 @@ class BeneficiaryNotFoundError(Exception):
     """Levée lorsqu'aucun bénéficiaire ne correspond à l'identifiant demandé."""
 
 
+class MatriculeAlreadyExistsError(Exception):
+    """Levée lorsque le matricule est déjà attribué à un autre bénéficiaire."""
+
+
 def _to_response(beneficiary: Beneficiary) -> BeneficiaryResponse:
     return BeneficiaryResponse.model_validate(beneficiary)
 
@@ -23,9 +27,15 @@ def _to_response(beneficiary: Beneficiary) -> BeneficiaryResponse:
 async def create(session: AsyncSession, data: BeneficiaryCreate) -> BeneficiaryResponse:
     """Crée un nouveau bénéficiaire actif."""
     repository = BeneficiaryRepository(session)
+    if await repository.get_by_matricule(data.matricule) is not None:
+        raise MatriculeAlreadyExistsError(
+            f"Matricule {data.matricule} is already in use"
+        )
+
     beneficiary = Beneficiary(
         first_name=data.first_name,
         last_name=data.last_name,
+        matricule=data.matricule,
         profession=data.profession,
         situation=data.situation,
         is_active=True,

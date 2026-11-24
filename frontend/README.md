@@ -80,7 +80,9 @@ Le formulaire envoie l'e-mail et le mot de passe à `POST /auth/login` sur le ba
 
 Le backend doit être démarré sur `http://localhost:8000`. Pour utiliser une autre adresse, définir `VITE_API_URL` dans un fichier `.env` à la racine de `frontend/` (par exemple `VITE_API_URL=http://localhost:8000`).
 
-Aucun identifiant n'est codé en dur dans le frontend. Les comptes de développement sont créés par `python -m src.seed` côté backend.
+Une fois connecté, l'écran de caisse consomme l'API : bénéficiaires actifs (`GET /cashier/beneficiaries`), bons enregistrés et transactions (`GET/POST /cashier/purchase-orders`), et état financier (`GET /cashier/reports`). Les données métier ne sont plus simulées dans le frontend : le matricule affiché est `beneficiaries.matricule` renvoyé par le serveur, et un bon est identifié par l'`id` renvoyé par le backend (`order_number` n'existe plus).
+
+La répartition 50 % / plafond 1 000 FCFA affichée avant validation est un aperçu calculé localement ; le serveur recalcule les parts lors du paiement. La reconnaissance faciale et l'envoi d'e-mail restent simulés côté navigateur. Les comptes de développement sont créés par `python -m src.seed` côté backend.
 
 ## Structure du projet
 
@@ -89,14 +91,13 @@ src/
 ├── App.jsx
 └── features/
     └── caissiere/
-        ├── api.js         # appels d'authentification vers le backend Python
+        ├── api.js         # appels API (auth, bénéficiaires, bons, rapports)
         ├── components/    # composants d'interface (formulaire, rapport, modales...)
         ├── hooks/         # logique réutilisable (commandes, vérification faciale)
         ├── pages/         # page principale CaissePage
         ├── schemas/       # validation (réservé)
         ├── types/         # types (réservé)
-        ├── utils.js       # calculs, agrégations, impression PDF
-        ├── mockData.js    # données de test (bénéficiaires et bons)
+        ├── utils.js       # calculs et impression PDF
         └── index.js       # API publique de la feature
 ```
 

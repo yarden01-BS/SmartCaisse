@@ -28,6 +28,7 @@ def make_beneficiary(**changes: Any) -> SimpleNamespace:
         "id": 5,
         "first_name": "Jane",
         "last_name": "Doe",
+        "matricule": "SIAT-005",
         "profession": "Teacher",
         "situation": Situation.PERMANENT,
         "is_active": True,
@@ -61,6 +62,7 @@ def test_create_requires_admin(client: TestClient) -> None:
     body = {
         "first_name": "Jane",
         "last_name": "Doe",
+        "matricule": "SIAT-005",
         "profession": "Teacher",
         "situation": "permanent",
     }
@@ -88,7 +90,7 @@ def test_create_beneficiary(
 
     async def fake_create(session: Any, data: BeneficiaryCreate) -> BeneficiaryResponse:
         received["data"] = data
-        return sample_response(id=6)
+        return sample_response(id=6, matricule="SIAT-006")
 
     monkeypatch.setattr(beneficiary_service, "create", fake_create)
     response = client.post(
@@ -97,6 +99,7 @@ def test_create_beneficiary(
         json={
             "first_name": "Jane",
             "last_name": "Doe",
+            "matricule": "SIAT-006",
             "profession": "Teacher",
             "situation": "permanent",
         },
@@ -104,8 +107,34 @@ def test_create_beneficiary(
 
     assert response.status_code == 201
     assert response.json()["id"] == 6
+    assert response.json()["matricule"] == "SIAT-006"
     assert received["data"].first_name == "Jane"
     assert received["data"].situation is Situation.PERMANENT
+
+
+def test_create_beneficiary_rejects_duplicate_matricule(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def fake_create(session: Any, data: BeneficiaryCreate) -> BeneficiaryResponse:
+        raise beneficiary_service.MatriculeAlreadyExistsError(
+            "Matricule SIAT-005 is already in use"
+        )
+
+    monkeypatch.setattr(beneficiary_service, "create", fake_create)
+    response = client.post(
+        "/beneficiaries",
+        headers=auth_headers("admin"),
+        json={
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "matricule": "SIAT-005",
+            "profession": "Teacher",
+            "situation": "permanent",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Matricule SIAT-005 is already in use"
 
 
 def test_update_beneficiary(
@@ -182,10 +211,14 @@ def test_suspend_not_found_is_404(
 def test_service_create_sets_active(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, Any] = {}
 
+    async def no_matricule(self: Any, matricule: str) -> None:
+        return None
+
     async def fake_add(self: Any, entity: Any) -> Any:
         captured["entity"] = entity
         return make_beneficiary(id=6)
 
+    monkeypatch.setattr(BeneficiaryRepository, "get_by_matricule", no_matricule)
     monkeypatch.setattr(BeneficiaryRepository, "add", fake_add)
     result = asyncio.run(
         beneficiary_service.create(
@@ -193,6 +226,7 @@ def test_service_create_sets_active(monkeypatch: pytest.MonkeyPatch) -> None:
             BeneficiaryCreate(
                 first_name="Jane",
                 last_name="Doe",
+                matricule="SIAT-006",
                 profession="Teacher",
                 situation=Situation.PERMANENT,
             ),
@@ -201,7 +235,31 @@ def test_service_create_sets_active(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert captured["entity"].is_active is True
     assert captured["entity"].first_name == "Jane"
+    assert captured["entity"].matricule == "SIAT-006"
     assert result.id == 6
+
+
+def test_service_create_rejects_duplicate_matricule(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def existing_matricule(self: Any, matricule: str) -> Any:
+        return make_beneficiary()
+
+    monkeypatch.setattr(BeneficiaryRepository, "get_by_matricule", existing_matricule)
+
+    with pytest.raises(beneficiary_service.MatriculeAlreadyExistsError):
+        asyncio.run(
+            beneficiary_service.create(
+                object(),
+                BeneficiaryCreate(
+                    first_name="John",
+                    last_name="Doe",
+                    matricule="SIAT-005",
+                    profession="Teacher",
+                    situation=Situation.PERMANENT,
+                ),
+            )
+        )
 
 
 def test_service_update_applies_only_supplied_fields(
