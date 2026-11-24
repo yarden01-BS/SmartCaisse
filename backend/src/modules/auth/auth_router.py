@@ -32,7 +32,7 @@ async def login(
     response: Response,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> LoginResponse:
-    """Authentifie un compte administrateur ou caissier et définit le cookie du jeton d'actualisation."""
+    """Authentifie un compte et définit le cookie de rafraîchissement."""
     try:
         access_token, refresh_token, result = await auth_service.authenticate(
             session, credentials

@@ -15,6 +15,7 @@ export default function ComptesListSection({
   onChangerFiltre,
   onModifier,
   onSupprimer,
+  chargement = false,
 }) {
   const [menuOuvertId, setMenuOuvertId] = useState(null);
 
@@ -58,7 +59,11 @@ export default function ComptesListSection({
         </div>
       </div>
 
-      {comptes.length === 0 ? (
+      {chargement ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center text-slate-500 text-sm">
+          Chargement des comptes depuis l'API...
+        </div>
+      ) : comptes.length === 0 ? (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center text-slate-500 text-sm">
           Aucun compte trouvé dans cette catégorie. Utilisez « Création de compte » pour en ajouter.
         </div>

@@ -73,3 +73,15 @@ async def suspend_beneficiary(
         return await beneficiary_service.suspend(session, beneficiary_id)
     except beneficiary_service.BeneficiaryNotFoundError as exc:
         raise _not_found(exc) from exc
+
+
+@router.delete("/{beneficiary_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_beneficiary(
+    beneficiary_id: int,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> None:
+    """Supprime un bénéficiaire et ses données associées."""
+    try:
+        await beneficiary_service.remove_cascade(session, beneficiary_id)
+    except beneficiary_service.BeneficiaryNotFoundError as exc:
+        raise _not_found(exc) from exc

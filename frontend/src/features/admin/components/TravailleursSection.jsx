@@ -1,12 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Edit3, MoreVertical, Search, Trash2, UserPlus, X } from 'lucide-react';
+import {
+  Edit3,
+  MoreVertical,
+  RotateCcw,
+  Search,
+  Trash2,
+  UserPlus,
+  X,
+} from 'lucide-react';
 import { normaliserMatricule } from '../utils';
+
+function libelleSituation(situation) {
+  return situation === 'stagiare' ? 'Stagiaire' : 'Permanent';
+}
 
 export default function BeneficiairesListe({
   beneficiaires,
   onAjouter,
   onModifier,
+  onSuspendre,
+  onReactiver,
   onSupprimer,
+  chargement = false,
 }) {
   const [recherche, setRecherche] = useState('');
   const [critere, setCritere] = useState('nom');
@@ -40,7 +55,7 @@ export default function BeneficiairesListe({
   const rechercheActive = recherche.trim().length > 0;
   const placeholder =
     critere === 'matricule'
-      ? 'Ex: SA7206 (recherche précise)'
+      ? 'Ex: SIAT-001 (recherche précise)'
       : 'Rechercher par nom ou prénom...';
 
   const reinitialiser = () => {
@@ -54,7 +69,8 @@ export default function BeneficiairesListe({
         <div>
           <h2 className="text-xl font-bold">Listes des bénéficiaires</h2>
           <p className="text-xs text-slate-400 mt-1">
-            Recherchez, modifiez ou supprimez un bénéficiaire enregistré.
+            Données chargées depuis l'API SmartCaisse. Recherchez, modifiez ou
+            supprimez un bénéficiaire.
           </p>
         </div>
         <button
@@ -110,7 +126,11 @@ export default function BeneficiairesListe({
 
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
         <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
-          {resultats.length === 0 ? (
+          {chargement ? (
+            <p className="text-center text-slate-500 text-sm py-12">
+              Chargement des bénéficiaires depuis l'API...
+            </p>
+          ) : resultats.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <p className="text-slate-500 text-sm">
                 {rechercheActive
@@ -130,28 +150,31 @@ export default function BeneficiairesListe({
             resultats.map((beneficiaire) => (
               <div
                 key={beneficiaire.id}
-                className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex justify-between items-center gap-3 relative"
+                className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex justify-between items-start gap-3 relative"
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <strong className="text-sm text-white">
                       {beneficiaire.prenom} {beneficiaire.nom}
                     </strong>
-                    {beneficiaire.matricule && (
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-900 border border-slate-700 text-slate-300">
-                        {beneficiaire.matricule}
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-900 border border-slate-700 text-slate-300">
+                      {beneficiaire.matricule}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-400">
+                      {libelleSituation(beneficiaire.situation)}
+                    </span>
+                    {!beneficiaire.isActive && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                        Suspendu
                       </span>
                     )}
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-400">
-                      {beneficiaire.situation}
-                    </span>
                   </div>
-                  <span className="text-[11px] font-mono text-slate-400 block break-all">
-                    {beneficiaire.signatureFaciale}
+                  <span className="text-[11px] text-slate-400 block">
+                    Service : {beneficiaire.profession || '—'}
                   </span>
                 </div>
 
-                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() =>
                       setMenuOuvertId(
@@ -165,7 +188,7 @@ export default function BeneficiairesListe({
                   </button>
 
                   {menuOuvertId === beneficiaire.id && (
-                    <div className="absolute right-0 top-11 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-20 py-2 w-40 text-left">
+                    <div className="absolute right-0 top-11 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-20 py-2 w-44 text-left">
                       <button
                         onClick={() => {
                           setMenuOuvertId(null);
@@ -175,6 +198,27 @@ export default function BeneficiairesListe({
                       >
                         <Edit3 className="w-3.5 h-3.5 text-blue-400" /> Modifier
                       </button>
+                      {beneficiaire.isActive ? (
+                        <button
+                          onClick={() => {
+                            setMenuOuvertId(null);
+                            onSuspendre(beneficiaire);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs text-amber-400 hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5 text-amber-400" /> Suspendre
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setMenuOuvertId(null);
+                            onReactiver(beneficiaire);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs text-emerald-400 hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-emerald-400" /> Réactiver
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setMenuOuvertId(null);

@@ -1,4 +1,4 @@
-"""Accès à la base de données pour l'authentification des comptes et la révocation des jetons d'actualisation."""
+"""Accès aux comptes et à la révocation des jetons d'actualisation."""
 
 from datetime import datetime
 
@@ -38,7 +38,7 @@ class RevokedTokenRepository(BaseRepository[RevokedToken]):
         return result.scalar_one_or_none() is not None
 
     async def revoke(self, jti: str, expires_at: datetime) -> bool:
-        """Insère une révocation de façon idempotente ; renvoie False si elle était déjà révoquée."""
+        """Insère une révocation idempotente ; renvoie False si elle existe déjà."""
         statement = (
             insert(RevokedToken)
             .values(jti=jti, expires_at=expires_at)

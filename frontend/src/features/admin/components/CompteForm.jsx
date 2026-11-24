@@ -22,6 +22,7 @@ export default function CompteForm({ compte, onSoumettre, onAnnuler }) {
         email: form.email,
         role: form.role,
         statut: form.statut,
+        motDePasse: form.motDePasse,
       });
     } else {
       onSoumettre(form);
@@ -67,7 +68,8 @@ export default function CompteForm({ compte, onSoumettre, onAnnuler }) {
           <select
             value={form.role}
             onChange={maj('role')}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm cursor-pointer"
+            disabled={estModification}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <option value="Caissière">Caissière</option>
             <option value="Administrateur">Administrateur</option>

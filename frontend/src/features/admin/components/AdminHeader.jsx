@@ -7,7 +7,7 @@ export default function AdminHeader({ adminUser, onLogout }) {
         <span className="text-lg font-bold text-emerald-400">SmartCaisse Admin</span>
         <span className="text-slate-600">|</span>
         <span className="text-sm text-slate-300">
-          Session : <strong className="text-white">{adminUser.nom}</strong>
+          Session : <strong className="text-white">{adminUser.email}</strong>
         </span>
       </div>
 

@@ -23,6 +23,7 @@ class BeneficiaryUpdate(BaseModel):
     last_name: str | None = Field(default=None, min_length=1)
     profession: str | None = Field(default=None, min_length=1)
     situation: Situation | None = None
+    is_active: bool | None = None
 
 
 class BeneficiaryResponse(BaseModel):

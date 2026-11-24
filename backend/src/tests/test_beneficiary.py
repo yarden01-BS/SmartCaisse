@@ -208,6 +208,29 @@ def test_suspend_not_found_is_404(
     assert response.status_code == 404
 
 
+def test_delete_beneficiary(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    appels: list[int] = []
+
+    async def fake_remove(session: Any, beneficiary_id: int) -> None:
+        appels.append(beneficiary_id)
+
+    monkeypatch.setattr(beneficiary_service, "remove_cascade", fake_remove)
+    response = client.delete("/beneficiaries/5", headers=auth_headers("admin"))
+
+    assert response.status_code == 204
+    assert appels == [5]
+
+
+def test_delete_beneficiary_requires_admin(client: TestClient) -> None:
+    assert client.delete("/beneficiaries/5").status_code == 401
+    assert (
+        client.delete("/beneficiaries/5", headers=auth_headers("cashier")).status_code
+        == 403
+    )
+
+
 def test_service_create_sets_active(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, Any] = {}
 

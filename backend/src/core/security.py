@@ -1,4 +1,4 @@
-"""Utilitaires de hachage de mots de passe et de JWT partagés par le module d'authentification."""
+"""Hachage de mots de passe et JWT partagés par l'authentification."""
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -38,7 +38,7 @@ def create_access_token(
 def create_refresh_token(
     payload: dict[str, Any], expires_delta: timedelta | None = None
 ) -> str:
-    """Construit un JWT signé de longue durée avec un identifiant unique utilisé pour la révocation et la rotation."""
+    """Construit un JWT de rafraîchissement avec un identifiant révocable."""
     data = payload.copy()
     lifetime = expires_delta or timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
     data["type"] = "refresh"
@@ -53,7 +53,7 @@ def decode_access_token(token: str) -> dict[str, Any]:
 
 
 def decode_refresh_token(token: str) -> dict[str, Any]:
-    """Valide un JWT d'actualisation et exige son type et son identifiant de révocation."""
+    """Valide un JWT d'actualisation et son identifiant de révocation."""
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     if payload.get("type") != "refresh" or not payload.get("jti"):
         raise jwt.InvalidTokenError("Not a refresh token")

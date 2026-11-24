@@ -63,6 +63,10 @@ L'application est disponible sur [http://localhost:5173](http://localhost:5173) 
 | `pnpm build`   | Génère la version de production (`dist`) |
 | `pnpm preview` | Prévisualise la version de production    |
 | `pnpm lint`    | Vérifie le code avec oxlint              |
+| `pnpm test`    | Exécute les tests Vitest (jsdom)         |
+| `pnpm test:watch` | Relance les tests en mode watch       |
+
+Les tests couvrent notamment l'authentification admin, le mapping des endpoints et le fait qu'aucune donnée de gestion n'est chargée avant l'ouverture de la session (évite le popup « Chargement impossible » sur l'écran de connexion).
 
 Les mêmes commandes fonctionnent avec `npm` (`npm install`, `npm run dev`, ...).
 
@@ -76,13 +80,22 @@ Une fois connecté, l'écran de caisse consomme l'API : bénéficiaires actifs (
 
 La répartition 50 % / plafond 1 000 FCFA affichée avant validation est un aperçu calculé localement ; le serveur recalcule les parts lors du paiement. La reconnaissance faciale et l'envoi d'e-mail restent simulés côté navigateur. Les comptes de développement sont créés par `python -m src.seed` côté backend.
 
-## Connexion de test (espace administrateur)
+## Connexion (espace administrateur)
 
-| Espace          | Nom    | Mot de passe |
-| --------------- | ------ | ------------ |
-| Administrateur  | `admin` | `1234`       |
+| Espace         | Identifiant               | Mot de passe  |
+| -------------- | ------------------------- | ------------- |
+| Administrateur | `admin@smartcaisse.com`   | `password123` |
 
-Le compte administrateur de test est défini dans `src/features/admin/utils.js` (`COMPTE_ADMIN_TEST`). Depuis chaque écran de connexion, un lien permet de passer à l'autre espace. Ces identifiants sont codés en dur pour les tests ; ils devront être remplacés par une vraie authentification via l'API (le backend `develop` prévoit par exemple `admin@smartcaisse.com` / `password123`).
+L'espace administrateur s'authentifie via `POST /auth/login` et vérifie le rôle `admin` avec `GET /me`. Le jeton d'accès est conservé dans la session du navigateur. Comme pour la caisse, définir `VITE_API_URL` pour utiliser une autre adresse de backend.
+
+Les comptes et les bénéficiaires affichés dans `/admin` proviennent exclusivement de l'API :
+
+| Ressource      | Endpoints utilisés                                                                 |
+| -------------- | ---------------------------------------------------------------------------------- |
+| Comptes        | `GET/POST /admin/accounts`, `PATCH/DELETE /admin/accounts/{id}`                     |
+| Bénéficiaires  | `GET/POST /beneficiaries`, `PATCH/DELETE /beneficiaries/{id}`, `POST .../suspend`   |
+
+Si un popup « Chargement impossible » affiche `Not Found`, le backend en cours d'exécution est antérieur à ces endpoints : arrêtez-le puis relancez `uvicorn src.main:app` depuis `backend/`.
 
 ## Structure du projet
 
@@ -97,11 +110,12 @@ frontend/
 │   ├── App.jsx                 # routes : /caisse et /admin
 │   ├── features/
 │   │   ├── admin/
+│   │   │   ├── api.js          # appels API (auth, comptes, bénéficiaires)
 │   │   │   ├── components/     # sidebar, formulaires, listes, modales
-│   │   │   ├── hooks/          # auth admin, comptes, bénéficiaires, signature faciale
+│   │   │   ├── hooks/          # auth admin, comptes, bénéficiaires
 │   │   │   ├── pages/          # AdminPage
 │   │   │   ├── index.js        # API publique de la feature
-│   │   │   └── utils.js        # compte de test, signatures faciales, matricules
+│   │   │   └── utils.js        # signatures faciales, matricules
 │   │   └── caissiere/
 │   │       ├── api.js          # appels API (auth, bénéficiaires, bons, rapports)
 │   │       ├── components/     # composants d'interface

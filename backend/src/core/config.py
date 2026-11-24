@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     REFRESH_TOKEN_EXPIRE_MINUTES: int
-    # À activer en production (HTTPS uniquement) ; désactivé pour le développement local.
+    # À activer en production (HTTPS uniquement) ; désactivé en local.
     COOKIE_SECURE: bool
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 

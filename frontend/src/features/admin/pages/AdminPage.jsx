@@ -19,7 +19,7 @@ const DIALOG_FERME = {
 };
 
 export default function AdminPage() {
-  const { adminUser, login, logout } = useAdminAuth();
+  const { adminUser, chargement: chargementAuth, login, logout } = useAdminAuth();
   const [sousPage, setSousPage] = useState('comptes-liste');
   const [editCompte, setEditCompte] = useState(null);
   const [editBeneficiaire, setEditBeneficiaire] = useState(null);
@@ -29,11 +29,36 @@ export default function AdminPage() {
     setDialog({ ouvert: true, type, titre, message });
   }, []);
 
-  const gestionComptes = useComptes(afficherDialog);
-  const gestionBeneficiaires = useBeneficiaires(afficherDialog);
+  const sessionActive = Boolean(adminUser);
+  const gestionComptes = useComptes(afficherDialog, sessionActive);
+  const gestionBeneficiaires = useBeneficiaires(afficherDialog, sessionActive);
+
+  const handleLogin = useCallback(
+    async (email, motDePasse) => {
+      setDialog(DIALOG_FERME);
+      return login(email, motDePasse);
+    },
+    [login]
+  );
+
+  const handleLogout = useCallback(async () => {
+    setDialog(DIALOG_FERME);
+    setSousPage('comptes-liste');
+    setEditCompte(null);
+    setEditBeneficiaire(null);
+    await logout();
+  }, [logout]);
+
+  if (chargementAuth) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+        Vérification de la session administrateur...
+      </div>
+    );
+  }
 
   if (!adminUser) {
-    return <AdminLoginScreen onLogin={login} />;
+    return <AdminLoginScreen onLogin={handleLogin} />;
   }
 
   const ouvrirModificationCompte = (compte) => {
@@ -41,12 +66,12 @@ export default function AdminPage() {
     setSousPage('comptes-modifier');
   };
 
-  const handleCreerCompte = (values) => {
-    if (gestionComptes.creerCompte(values)) setSousPage('comptes-liste');
+  const handleCreerCompte = async (values) => {
+    if (await gestionComptes.creerCompte(values)) setSousPage('comptes-liste');
   };
 
-  const handleModifierCompte = (values) => {
-    if (gestionComptes.modifierCompte(values)) setSousPage('comptes-liste');
+  const handleModifierCompte = async (values) => {
+    if (await gestionComptes.modifierCompte(values)) setSousPage('comptes-liste');
   };
 
   const ouvrirModificationBeneficiaire = (beneficiaire) => {
@@ -54,14 +79,14 @@ export default function AdminPage() {
     setSousPage('beneficiaires-modifier');
   };
 
-  const handleAjouterBeneficiaire = (values) => {
-    if (gestionBeneficiaires.ajouterBeneficiaire(values)) {
+  const handleAjouterBeneficiaire = async (values) => {
+    if (await gestionBeneficiaires.ajouterBeneficiaire(values)) {
       setSousPage('beneficiaires-liste');
     }
   };
 
-  const handleModifierBeneficiaire = (values) => {
-    if (gestionBeneficiaires.modifierBeneficiaire(values)) {
+  const handleModifierBeneficiaire = async (values) => {
+    if (await gestionBeneficiaires.modifierBeneficiaire(values)) {
       setSousPage('beneficiaires-liste');
     }
   };
@@ -70,7 +95,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col">
-      <AdminHeader adminUser={adminUser} onLogout={logout} />
+      <AdminHeader adminUser={adminUser} onLogout={handleLogout} />
 
       <div className="flex-1 flex flex-col md:flex-row">
         <AdminSidebar sousPage={sousPage} onChangeSousPage={setSousPage} />
@@ -88,6 +113,7 @@ export default function AdminPage() {
               onChangerFiltre={gestionComptes.setFiltreStatut}
               onModifier={ouvrirModificationCompte}
               onSupprimer={gestionComptes.supprimerCompte}
+              chargement={gestionComptes.chargement}
             />
           )}
 
@@ -120,7 +146,10 @@ export default function AdminPage() {
               beneficiaires={gestionBeneficiaires.beneficiaires}
               onAjouter={() => setSousPage('beneficiaires-creer')}
               onModifier={ouvrirModificationBeneficiaire}
+              onSuspendre={gestionBeneficiaires.suspendreBeneficiaire}
+              onReactiver={gestionBeneficiaires.reactiverBeneficiaire}
               onSupprimer={gestionBeneficiaires.supprimerBeneficiaire}
+              chargement={gestionBeneficiaires.chargement}
             />
           )}
 

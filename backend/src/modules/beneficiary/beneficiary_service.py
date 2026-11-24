@@ -1,8 +1,15 @@
 """Logique métier pour l'administration des bénéficiaires."""
 
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...db.models import Beneficiary
+from ...db.models import (
+    Account,
+    Beneficiary,
+    FaceEmbedding,
+    PurchaseOrder,
+    Transaction,
+)
 from .beneficiary_repo import BeneficiaryRepository
 from .beneficiary_schemas import (
     BeneficiaryCreate,
@@ -80,3 +87,35 @@ async def suspend(session: AsyncSession, beneficiary_id: int) -> BeneficiaryResp
         raise BeneficiaryNotFoundError(f"Beneficiary {beneficiary_id} not found")
 
     return _to_response(await repository.update(beneficiary, is_active=False))
+
+
+async def remove_cascade(session: AsyncSession, beneficiary_id: int) -> None:
+    """Supprime un bénéficiaire et toutes les données qui lui sont rattachées."""
+    repository = BeneficiaryRepository(session)
+    beneficiary = await repository.get_by_id(beneficiary_id)
+    if beneficiary is None:
+        raise BeneficiaryNotFoundError(f"Beneficiary {beneficiary_id} not found")
+
+    commandes = (
+        await session.execute(
+            select(PurchaseOrder.id).where(
+                PurchaseOrder.beneficiary_id == beneficiary_id
+            )
+        )
+    ).scalars().all()
+    if commandes:
+        await session.execute(
+            delete(Transaction).where(Transaction.purchase_order_id.in_(commandes))
+        )
+        await session.execute(
+            delete(PurchaseOrder).where(PurchaseOrder.id.in_(commandes))
+        )
+
+    await session.execute(
+        delete(FaceEmbedding).where(FaceEmbedding.beneficiary_id == beneficiary_id)
+    )
+    await session.execute(
+        delete(Account).where(Account.beneficiary_id == beneficiary_id)
+    )
+    await session.delete(beneficiary)
+    await session.flush()

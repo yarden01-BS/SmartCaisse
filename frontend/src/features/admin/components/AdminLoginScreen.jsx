@@ -1,27 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { COMPTE_ADMIN_TEST } from '../utils';
 
 export default function AdminLoginScreen({ onLogin }) {
   const navigate = useNavigate();
-  const [nom, setNom] = useState('');
-  const [pwd, setPwd] = useState('');
+  const [email, setEmail] = useState('');
+  const [motDePasse, setMotDePasse] = useState('');
   const [error, setError] = useState('');
+  const [connexion, setConnexion] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const identifiant = nom.trim().toLowerCase();
-    if (
-      identifiant === COMPTE_ADMIN_TEST.identifiant &&
-      pwd === COMPTE_ADMIN_TEST.motDePasse
-    ) {
-      setError('');
-      onLogin(identifiant);
-    } else {
-      setError(
-        `Identifiant ou mot de passe incorrect (Test : ${COMPTE_ADMIN_TEST.identifiant} / ${COMPTE_ADMIN_TEST.motDePasse})`
-      );
+    setError('');
+    setConnexion(true);
+    try {
+      await onLogin(email, motDePasse);
+    } catch (err) {
+      setError(err.message || 'Connexion impossible.');
+    } finally {
+      setConnexion(false);
     }
   };
 
@@ -48,12 +45,12 @@ export default function AdminLoginScreen({ onLogin }) {
           <h1 className="text-2xl font-bold text-center mb-6">Accès Supervision</h1>
 
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Nom administrateur</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Adresse e-mail</label>
             <input
-              type="text"
-              placeholder="Ex: admin"
-              value={nom}
-              onChange={(e) => setNom(e.target.value)}
+              type="email"
+              placeholder="admin@smartcaisse.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
             />
           </div>
@@ -62,21 +59,26 @@ export default function AdminLoginScreen({ onLogin }) {
             <label className="block text-sm text-slate-400 mb-1.5">Mot de passe</label>
             <input
               type="password"
-              placeholder="Ex: 1234"
-              value={pwd}
-              onChange={(e) => setPwd(e.target.value)}
+              placeholder="Mot de passe"
+              value={motDePasse}
+              onChange={(e) => setMotDePasse(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-3.5 rounded-xl transition-colors mt-2 cursor-pointer text-white"
+            disabled={connexion}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 font-bold py-3.5 rounded-xl transition-colors mt-2 cursor-pointer text-white"
           >
-            Se connecter
+            {connexion ? 'Connexion...' : 'Se connecter'}
           </button>
 
           {error && <p className="text-red-400 text-sm text-center mt-2">{error}</p>}
+
+          <p className="text-center text-xs text-slate-400 pt-2">
+            Compte de démonstration : admin@smartcaisse.com / password123
+          </p>
 
           <p className="text-center text-xs text-slate-400 pt-2">
             Espace caissière ?{' '}
