@@ -1,25 +1,65 @@
-import { useState } from 'react';
-import { Building2, CheckCircle2, IdCard, Save } from 'lucide-react';
-import { normaliserMatricule } from '../utils';
+import { useEffect, useRef, useState } from 'react';
+import { Building2, Camera, CheckCircle2, Save } from 'lucide-react';
+import { captureFaceFrames } from '../../../lib/faceId';
 
 export default function BeneficiaireForm({ beneficiaire, onSoumettre, onAnnuler }) {
   const estModification = Boolean(beneficiaire);
 
   const [form, setForm] = useState({
-    matricule: beneficiaire?.matricule ?? '',
     nom: beneficiaire?.nom ?? '',
     prenom: beneficiaire?.prenom ?? '',
     profession: beneficiaire?.profession ?? '',
     situation: beneficiaire?.situation ?? 'permanent',
   });
+  const [visageFrames, setVisageFrames] = useState([]);
+  const [captureStatus, setCaptureStatus] = useState('');
+  const [capturing, setCapturing] = useState(false);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   const maj = (champ) => (e) => setForm({ ...form, [champ]: e.target.value });
-  const majMatricule = (e) =>
-    setForm({ ...form, matricule: normaliserMatricule(e.target.value) });
+
+  const demarrerCapture = async () => {
+    setCapturing(true);
+    setCaptureStatus('Activation de la caméra...');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: 480, height: 320 },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const frames = await captureFaceFrames(videoRef.current, 3000, 3);
+      stream.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      setVisageFrames(frames);
+      setCaptureStatus(`${frames.length} images faciales capturées.`);
+    } catch (error) {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      setCaptureStatus(error.message || 'Capture faciale impossible.');
+    } finally {
+      setCapturing(false);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSoumettre(estModification ? { ...beneficiaire, ...form } : form);
+    onSoumettre(
+      estModification
+        ? { ...beneficiaire, ...form, visageFrames }
+        : { ...form, visageFrames }
+    );
   };
 
   return (
@@ -31,31 +71,11 @@ export default function BeneficiaireForm({ beneficiaire, onSoumettre, onAnnuler 
       </h2>
       <p className="text-xs text-slate-400 mb-6">
         {estModification
-          ? "Mettez à jour l'identité, le matricule ou le service du bénéficiaire"
-          : "Renseignez l'identité et le matricule du bénéficiaire"}
+          ? "Mettez à jour l'identité ou le service du bénéficiaire"
+          : "Renseignez l'identité du bénéficiaire ; le matricule est généré automatiquement"}
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-        <div>
-          <label className="block text-slate-400 mb-1">Matricule</label>
-          <div className="relative">
-            <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Ex: SIAT-004"
-              value={form.matricule}
-              onChange={majMatricule}
-              disabled={estModification}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-white font-mono focus:outline-none focus:border-blue-500 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-            />
-          </div>
-          {estModification && (
-            <p className="text-[10px] text-slate-500 mt-1">
-              Le matricule est unique et ne peut pas être modifié.
-            </p>
-          )}
-        </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-slate-400 mb-1">Nom</label>
@@ -103,6 +123,42 @@ export default function BeneficiaireForm({ beneficiaire, onSoumettre, onAnnuler 
             <option value="permanent">Permanent</option>
             <option value="stagiare">Stagiaire</option>
           </select>
+        </div>
+
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold text-slate-300">
+              Reconnaissance faciale
+            </span>
+            <button
+              type="button"
+              onClick={demarrerCapture}
+              disabled={capturing}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 text-white px-3 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+            >
+              <Camera className="w-4 h-4" />
+              {capturing ? 'Capture en cours...' : 'Capturer le visage'}
+            </button>
+          </div>
+
+          {capturing && (
+            <div className="relative w-full h-40 bg-black rounded-xl overflow-hidden border border-blue-500/40">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+
+          <p className="text-xs text-slate-400">
+            {captureStatus ||
+              (visageFrames.length
+                ? `${visageFrames.length} images prêtes à être enregistrées.`
+                : 'Aucune capture faciale pour le moment.')}
+          </p>
         </div>
 
         <div className="flex gap-3 pt-2">

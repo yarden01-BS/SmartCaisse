@@ -160,7 +160,6 @@ describe('AdminPage', () => {
       screen.getByRole('button', { name: 'Créer un nouveau bénéficiaire' })
     );
 
-    await user.type(screen.getByPlaceholderText('Ex: SIAT-004'), 'SIAT-010');
     await user.type(screen.getByPlaceholderText('Ex: Makosso'), 'Doe');
     await user.type(screen.getByPlaceholderText('Ex: Jean'), 'Jane');
     await user.type(screen.getByPlaceholderText('Ex: Comptable'), 'Teacher');
@@ -169,11 +168,11 @@ describe('AdminPage', () => {
     );
 
     expect(api.creerBeneficiaire).toHaveBeenCalledWith({
-      matricule: 'SIAT-010',
       nom: 'Doe',
       prenom: 'Jane',
       profession: 'Teacher',
       situation: 'permanent',
+      visageFrames: [],
     });
     expect(
       await screen.findByText('Bénéficiaire enregistré')
