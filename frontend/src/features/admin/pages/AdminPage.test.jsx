@@ -172,6 +172,7 @@ describe('AdminPage', () => {
       prenom: 'Jane',
       profession: 'Teacher',
       situation: 'permanent',
+      visageFrames: [],
     });
     expect(
       await screen.findByText('Bénéficiaire enregistré')

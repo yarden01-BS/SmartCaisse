@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Building2, Camera, CheckCircle2, Save } from 'lucide-react';
+import { captureFaceFrames } from '../../../lib/faceId';
+
 export default function BeneficiaireForm({ beneficiaire, onSoumettre, onAnnuler }) {
   const estModification = Boolean(beneficiaire);
 
@@ -9,11 +11,55 @@ export default function BeneficiaireForm({ beneficiaire, onSoumettre, onAnnuler 
     profession: beneficiaire?.profession ?? '',
     situation: beneficiaire?.situation ?? 'permanent',
   });
+  const [visageFrames, setVisageFrames] = useState([]);
+  const [captureStatus, setCaptureStatus] = useState('');
+  const [capturing, setCapturing] = useState(false);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
   const maj = (champ) => (e) => setForm({ ...form, [champ]: e.target.value });
+
+  const demarrerCapture = async () => {
+    setCapturing(true);
+    setCaptureStatus('Activation de la caméra...');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: 480, height: 320 },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const frames = await captureFaceFrames(videoRef.current, 3000, 3);
+      stream.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      setVisageFrames(frames);
+      setCaptureStatus(`${frames.length} images faciales capturées.`);
+    } catch (error) {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      setCaptureStatus(error.message || 'Capture faciale impossible.');
+    } finally {
+      setCapturing(false);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSoumettre(estModification ? { ...beneficiaire, ...form } : form);
+    onSoumettre(
+      estModification
+        ? { ...beneficiaire, ...form, visageFrames }
+        : { ...form, visageFrames }
+    );
   };
 
   return (
@@ -77,6 +123,42 @@ export default function BeneficiaireForm({ beneficiaire, onSoumettre, onAnnuler 
             <option value="permanent">Permanent</option>
             <option value="stagiare">Stagiaire</option>
           </select>
+        </div>
+
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold text-slate-300">
+              Reconnaissance faciale
+            </span>
+            <button
+              type="button"
+              onClick={demarrerCapture}
+              disabled={capturing}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 text-white px-3 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+            >
+              <Camera className="w-4 h-4" />
+              {capturing ? 'Capture en cours...' : 'Capturer le visage'}
+            </button>
+          </div>
+
+          {capturing && (
+            <div className="relative w-full h-40 bg-black rounded-xl overflow-hidden border border-blue-500/40">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+
+          <p className="text-xs text-slate-400">
+            {captureStatus ||
+              (visageFrames.length
+                ? `${visageFrames.length} images prêtes à être enregistrées.`
+                : 'Aucune capture faciale pour le moment.')}
+          </p>
         </div>
 
         <div className="flex gap-3 pt-2">
