@@ -5,6 +5,7 @@ import random
 
 from faker import Faker
 
+from src.core.crypto import encrypt_template
 from src.core.security import hash_password
 from src.db.database import SessionLocal
 from src.db.models import (
@@ -12,6 +13,7 @@ from src.db.models import (
     AccountType,
     Beneficiary,
     Cashier,
+    FingerStatus,
     PurchaseOrder,
     Report,
     Situation,
@@ -47,6 +49,13 @@ async def seed() -> None:
                 is_active=True
                 if not beneficiaries
                 else fake.boolean(chance_of_getting_true=90),
+                # Le premier bénéficiaire sert de référence biométrique aux bons de commande.
+                finger_status=(
+                    FingerStatus.VALIDATED if index == 0 else FingerStatus.FINGER_PENDING
+                ),
+                fingerprint_template=(
+                    encrypt_template(b"demo-fingerprint-template") if index == 0 else None
+                ),
             )
             session.add(beneficiary)
             await session.flush()

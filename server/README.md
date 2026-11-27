@@ -54,7 +54,7 @@ uv run python src/test.py
 | Variable | Description | Default |
 |---|---|---|
 | `BACKEND_URL` | Base URL of the FastAPI backend | `http://localhost:8000` |
-| `AGENT_API_KEY` | Shared secret, must match the backend | *(empty)* |
+| `AGENT_API_KEY` | Shared secret, must match the backend | *(required)* |
 | `POLL_INTERVAL` | Polling interval in seconds | `2` |
 | `UFSCANNER_DLL` | Path to `UFScanner.dll` | `./UFScanner.dll` |
 
@@ -62,5 +62,6 @@ uv run python src/test.py
 
 ## Notes
 
+- The agent sends `X-Agent-Key` on every request. A mismatch is rejected with `401 Invalid agent key`; restart the backend after changing `AGENT_API_KEY` so it reloads the root `.env`.
 - `src/test.py` is kept usable as-is and is the reference for SDK calls.
 - Template extraction and 1:1 matching are not covered by `src/test.py`: see the TODOs in `src/scanner.py` and `src/agent.py`.

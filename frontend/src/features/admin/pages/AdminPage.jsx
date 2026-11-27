@@ -142,7 +142,6 @@ export default function AdminPage() {
           {sousPage === 'beneficiaires-creer' && (
             <div className="max-w-3xl mx-auto">
               <BeneficiaireForm
-                typeBiometrie="empreinte"
                 onSoumettre={handleAjouterBeneficiaire}
                 onAnnuler={() => setSousPage('beneficiaires-liste')}
               />
@@ -165,7 +164,6 @@ export default function AdminPage() {
             <div className="max-w-3xl mx-auto">
               <BeneficiaireForm
                 beneficiaire={editBeneficiaire}
-                typeBiometrie="empreinte"
                 onSoumettre={handleModifierBeneficiaire}
                 onAnnuler={() => setSousPage('beneficiaires-liste')}
               />

@@ -10,7 +10,7 @@ SmartCaisse permet de gérer les bénéficiaires, de calculer la part prise en c
 
 - Gérer les comptes des bénéficiaires (employés).
 - Calculer la part de l'entreprise dans la subvention des employés.
-- Sécuriser les transactions monétaires (authentification par jetons, puis FaceID).
+- Sécuriser les transactions monétaires (authentification par jetons, puis empreinte digitale).
 
 ## Stack technique
 

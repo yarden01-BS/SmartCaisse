@@ -7,3 +7,4 @@ frontend/node_modules/
 .env.*
 !.env.example
 image.png
+server/template_token.txt
