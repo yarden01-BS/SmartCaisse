@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { login, getBeneficiaires, restoreSession, logout } from '../api';
+import useCommandes from '../hooks/useCommandes';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -44,39 +46,11 @@ export default function CaissePage() {
   // Sous-section active : 'commande' | 'rapport' | 'profil'
   const [sectionActive, setSectionActive] = useState('commande');
 
-  // Données simulées du personnel client
-  const personnelMock = [
-    { id: 1, matricule: 'SIAT-104', nom: 'Jean Makosso', statut: 'Travailleur', service: 'Production' },
-    { id: 2, matricule: 'SIAT-218', nom: 'Clarisse Moukoko', statut: 'Stagiaire', service: 'Comptabilité' },
-    { id: 3, matricule: 'SIAT-089', nom: 'Alain Nzaba', statut: 'Travailleur', service: 'Logistique' },
-    { id: 4, matricule: 'SIAT-312', nom: 'Nadia Malonga', statut: 'Stagiaire', service: 'Qualité' },
-    { id: 5, matricule: 'SIAT-145', nom: 'Brice Ondongo', statut: 'Travailleur', service: 'Maintenance' },
-  ];
+  const [personnel, setPersonnel] = useState([]);
+  const { commandes, ajouterCommande } = useCommandes(Boolean(caissiere));
 
   const aujourdhuiStr = new Date().toISOString().slice(0, 10);
   const moisActuelStr = new Date().toISOString().slice(0, 7);
-
-  // Historique des bons de commande
-  const [commandes, setCommandes] = useState([
-    {
-      numBon: 1,
-      date: `${aujourdhuiStr} 08:45`,
-      client: { id: 1, matricule: 'SIAT-104', nom: 'Jean Makosso', statut: 'Travailleur', service: 'Production' },
-      prixTotal: 2500,
-      partEntreprise: 1000,
-      partClient: 1500,
-      caissiereNom: 'Sarah',
-    },
-    {
-      numBon: 2,
-      date: `${aujourdhuiStr} 09:30`, client: { id: 2, matricule: 'SIAT-218', nom: 'Clarisse Moukoko', statut: 'Stagiaire', service: 'Comptabilité' }, prixTotal: 1600, partEntreprise: 800, partClient: 800, caissiereNom: 'Sarah', }, { numBon: 3, date: `${moisActuelStr}-02 12:15`,
-      client: { id: 3, matricule: 'SIAT-089', nom: 'Alain Nzaba', statut: 'Travailleur', service: 'Logistique' },
-      prixTotal: 3000,
-      partEntreprise: 1000,
-      partClient: 2000,
-      caissiereNom: 'Sarah',
-    },
-  ]);
 
   // Liste déroulante avec recherche
   const [dropdownOuvert, setDropdownOuvert] = useState(false);
@@ -104,30 +78,23 @@ export default function CaissePage() {
 
   const { partEntreprise, partClient } = calculerRepartitionSiat(montantInput);
 
-  const personnelFiltre = personnelMock.filter(
+  const personnelFiltre = personnel.filter(
     (p) =>
       p.nom.toLowerCase().includes(rechercheClient.toLowerCase()) ||
       p.matricule.toLowerCase().includes(rechercheClient.toLowerCase()) ||
       p.service.toLowerCase().includes(rechercheClient.toLowerCase())
   );
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (loginNom.trim() && loginPwd === '1234') {
-      setCaissiere({
-        id: 2,
-        matricule: 'CAIS-002',
-        nom: loginNom.trim(),
-        role: 'Opératrice de Caisse',
-        poste: 'Caisse Principale — Cantine SIAT',
-        telephone: '+242 06 600 12 34',
-        datePriseService: '15 Janvier 2025',
-        statut: 'Compte Actif',
-        methodeAuth: 'Lecteur Biométrique (Empreinte Digitale)',
-      });
+    try {
+      const user = await login(loginNom.trim(), loginPwd);
+      setCaissiere(user);
       setLoginError('');
-    } else {
-      setLoginError('Nom ou mot de passe incorrect (Test : 1234)');
+      const beneficiaires = await getBeneficiaires();
+      setPersonnel(beneficiaires);
+    } catch (error) {
+      setLoginError(error.message || 'Connexion impossible.');
     }
   };
 
@@ -146,33 +113,21 @@ export default function CaissePage() {
     }, 1500);
   };
 
-  const handleValiderCommande = (e) => {
+  const handleValiderCommande = async (e) => {
     e.preventDefault();
     const montant = parseFloat(montantInput);
     if (!empreinteValidee || !clientSelectionne || isNaN(montant) || montant <= 0) return;
-
-    const maintenant = new Date();
-    const dateFormatee = `${maintenant.toISOString().slice(0, 10)}${maintenant
-      .toTimeString()
-      .slice(0, 5)}`;
-
-    const nouveauBon = {
-      numBon: commandes.length + 1,
-      date: dateFormatee,
-      client: clientSelectionne,
-      prixTotal: montant,
-      partEntreprise,
-      partClient,
-      caissiereNom: caissiere.nom,
-    };
-
-    setCommandes([nouveauBon, ...commandes]);
-    setMontantInput('');
-    setEmpreinteValidee(false);
-    setPrintFeedback('');
-    setStatusMessage(
-      `Bon N°${nouveauBon.numBon} validé pour ${clientSelectionne.nom} ! Client : ${partClient.toLocaleString()} FCFA \vert{} SIAT :${partEntreprise.toLocaleString()} FCFA`
-    );
+    try {
+      const bon = await ajouterCommande({ client: clientSelectionne, prixTotal: montant });
+      setMontantInput('');
+      setEmpreinteValidee(false);
+      setPrintFeedback('');
+      setStatusMessage(
+        `Bon N°${bon.numBon} validé pour ${clientSelectionne.nom} ! Client : ${partClient.toLocaleString()} FCFA | SIAT : ${partEntreprise.toLocaleString()} FCFA`
+      );
+    } catch (error) {
+      setStatusMessage(error.message || 'Impossible d’enregistrer le bon.');
+    }
   };
 
   // --- Impression / Export PDF d'un Bon ---
@@ -237,10 +192,10 @@ export default function CaissePage() {
             <h1 className="text-2xl font-bold text-center mb-6">Ouverture de Caisse</h1>
 
             <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Nom de la caissière</label>
+              <label className="block text-sm text-slate-400 mb-1.5">Email de la caissière</label>
               <input
-                type="text"
-                placeholder="Ex: Sarah"
+                type="email"
+                placeholder="Ex: caissiere@smartcaisse.com"
                 value={loginNom}
                 onChange={(e) => setLoginNom(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500"
@@ -251,7 +206,7 @@ export default function CaissePage() {
               <label className="block text-sm text-slate-400 mb-1.5">Mot de passe</label>
               <input
                 type="password"
-                placeholder="Ex: 1234"
+                placeholder="Mot de passe"
                 value={loginPwd}
                 onChange={(e) => setLoginPwd(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500"

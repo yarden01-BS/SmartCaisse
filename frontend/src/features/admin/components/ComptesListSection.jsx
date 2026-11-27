@@ -1,7 +1,10 @@
 
 import {
+  Circle,
   Edit3,
   Mail,
+  Pause,
+  Play,
   ShieldCheck,
   Trash2,
   UserCheck,
@@ -101,7 +104,8 @@ export default function ComptesListSection({
                       : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
                   }`}
                 >
-                  {compte.statut === 'actif' ? '● Actif' : '● Suspendu'}
+                  <Circle className="w-2 h-2 fill-current inline mr-1" />
+                  {compte.statut === 'actif' ? 'Actif' : 'Suspendu'}
                 </span>
 
                 <div className="flex items-center gap-2">
@@ -127,7 +131,11 @@ export default function ComptesListSection({
                     }`}
                     title={compte.statut === 'actif' ? 'Suspendre ce compte' : 'Réactiver ce compte'}
                   >
-                    {compte.statut === 'actif' ? '⏸' : '▶'}
+                    {compte.statut === 'actif' ? (
+                      <Pause className="w-4 h-4" />
+                    ) : (
+                      <Play className="w-4 h-4" />
+                    )}
                   </button>
                   )}
                   {compte.role !== 'Caissière' && (
