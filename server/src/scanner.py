@@ -2,8 +2,7 @@
 
 import base64
 import os
-import sys
-from ctypes import byref, c_int, c_void_p, create_string_buffer, windll
+from ctypes import byref, c_int, c_void_p, windll
 from pathlib import Path
 
 # Réutilise la DLL comme dans server/test.py.

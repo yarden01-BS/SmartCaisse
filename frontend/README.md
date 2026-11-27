@@ -23,36 +23,54 @@ pnpm -v
 
 ## Démarrage rapide (pas à pas)
 
-1. **Démarrer le backend** (dans un premier terminal) :
-   ```bash
-   cd ../backend
-   docker compose -f compose.yml up -d
-   uv sync
-   uv run alembic upgrade head
-   uv run python -m src.seed
-   uv run uvicorn src.main:app --reload
-   ```
-   L'API est alors disponible sur `http://localhost:8000`.
+Les commandes ci-dessous partent de la racine du dépôt `SmartCaisse/`.
 
-2. **Installer et lancer le frontend** (dans un second terminal) :
-   ```bash
-   cd frontend
-   pnpm install
-   pnpm dev
-   ```
+### 1. Configuration et backend (premier terminal)
 
-3. **Ouvrir l'application** : `http://localhost:5173`.
+Depuis la **racine du dépôt** :
 
-4. **Identifiants de démonstration** :
-   - Caissière : `cashier@smartcaisse.com` / `password123`
-   - Administrateur : `admin@smartcaisse.com` / `password123`
+```bash
+cp .env.example .env
+# Windows PowerShell : Copy-Item .env.example .env
+docker compose -f backend/compose.yml up -d
+```
 
-5. **Vérifications utiles** :
-   ```bash
-   pnpm lint
-   pnpm test
-   pnpm build
-   ```
+Puis depuis le dossier **`backend/`** :
+
+```bash
+cd backend
+uv sync
+uv run alembic upgrade head
+uv run python -m src.seed        # une seule fois sur une base neuve
+uv run uvicorn src.main:app --reload
+```
+
+L'API est alors disponible sur `http://localhost:8000`.
+
+### 2. Frontend (second terminal, depuis la racine du dépôt)
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+### 3. Ouvrir l'application
+
+`http://localhost:5173`
+
+### 4. Identifiants de démonstration
+
+- Caissière : `cashier@smartcaisse.com` / `password123`
+- Administrateur : `admin@smartcaisse.com` / `password123`
+
+### 5. Vérifications utiles (depuis `frontend/`)
+
+```bash
+pnpm lint
+pnpm test
+pnpm build
+```
 
 ## Installer pnpm
 
@@ -81,9 +99,10 @@ iwr https://get.pnpm.io/install.ps1 -useb | iex
 
 ## Installation et démarrage
 
-Depuis le dossier `frontend` :
+Depuis la racine du dépôt, placez-vous dans le dossier `frontend/` :
 
 ```bash
+cd frontend
 pnpm install
 pnpm dev
 ```
@@ -107,7 +126,7 @@ Les mêmes commandes fonctionnent avec `npm` (`npm install`, `npm run dev`, ...)
 
 Le formulaire envoie l'e-mail et le mot de passe à `POST /auth/login` sur le backend Python. Seuls les comptes avec le rôle `cashier` peuvent ouvrir la caisse. Le jeton d'accès est conservé dans la session du navigateur et utilisé en bearer sur `GET /me` pour récupérer le profil réel ; le cookie de rafraîchissement reste géré par le serveur.
 
-Le backend doit être démarré sur `http://localhost:8000`. Pour utiliser une autre adresse, définir `VITE_API_URL` dans un fichier `.env` à la racine de `frontend/` (par exemple `VITE_API_URL=http://localhost:8000`).
+Le backend doit être démarré sur `http://localhost:8000`. Le fichier `.env` à la racine du dépôt configure le backend et Docker ; Vite lit ses propres variables depuis `frontend/.env`. Pour utiliser une autre adresse d'API, définir `VITE_API_URL=http://localhost:8000` dans `frontend/.env`.
 
 Une fois connecté, l'écran de caisse consomme l'API : bénéficiaires actifs (`GET /cashier/beneficiaries`), bons enregistrés et transactions (`GET/POST /cashier/purchase-orders`), et état financier (`GET /cashier/reports`). Les données métier ne sont plus simulées dans le frontend : le matricule affiché est `beneficiaries.matricule` renvoyé par le serveur, et un bon est identifié par l'`id` renvoyé par le backend (`order_number` n'existe plus).
 

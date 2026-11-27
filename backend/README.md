@@ -65,30 +65,39 @@ Le backend suit une architecture modulaire : les fonctionnalités sont organisé
 
 ## Démarrage rapide (pas à pas)
 
-Depuis la racine du dépôt, puis depuis `backend` :
+Les commandes ci-dessous partent de la racine du dépôt `SmartCaisse/`.
+
+### Depuis la racine du dépôt
 
 ```bash
-# 1. Configuration
+# 1. Configuration (fichier .env unique du projet)
 cp .env.example .env
+# Windows PowerShell : Copy-Item .env.example .env
 
 # 2. Base de données PostgreSQL
 docker compose -f backend/compose.yml up -d
+docker compose -f backend/compose.yml ps
+```
+
+### Depuis le dossier `backend/`
+
+```bash
+cd backend
 
 # 3. Dépendances Python
-cd backend
 uv sync
 
 # 4. Schéma de base
 uv run alembic upgrade head
 
-# 5. Données de démonstration (une seule fois)
+# 5. Données de démonstration (une seule fois sur une base neuve)
 uv run python -m src.seed
 
-# 6. Serveur API
+# 6. Serveur API (rechargement automatique)
 uv run uvicorn src.main:app --reload
 ```
 
-Puis, dans un autre terminal :
+### Depuis le dossier `frontend/` (autre terminal, depuis la racine du dépôt)
 
 ```bash
 cd frontend
@@ -123,10 +132,10 @@ Ne commettez jamais ce fichier. Ajustez les valeurs si besoin, en particulier `S
 ```bash
 # Depuis la racine du projet
 docker compose -f backend/compose.yml up -d
-docker compose -f backend/compose.yml up ps
+docker compose -f backend/compose.yml ps
 ```
 
-Le service `db` doit passer à l'état `healthy`. Le port `5432` doit être disponible. Pour arrêter la base : `docker compose down` ; pour supprimer aussi les données : `docker compose down -v`.
+Le service `db` doit passer à l'état `healthy`. Le port `5432` doit être disponible. Depuis la racine du dépôt, pour arrêter la base : `docker compose -f backend/compose.yml down` ; pour supprimer aussi les données : `docker compose -f backend/compose.yml down -v`.
 
 ### 3. Installer les dépendances et créer `.venv`
 
@@ -480,7 +489,7 @@ Les opérations sont réalisées avec SQLAlchemy en asynchrone. Alembic gère le
 
 ## Commandes utiles
 
-Toutes les commandes ci-dessous se lancent depuis `backend` avec l'environnement créé par `uv sync`.
+Toutes les commandes ci-dessous se lancent depuis le dossier `backend/` avec l'environnement créé par `uv sync` (depuis la racine du dépôt : `cd backend`).
 
 ### Migrations Alembic
 
