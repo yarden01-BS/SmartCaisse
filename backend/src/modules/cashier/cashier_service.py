@@ -6,7 +6,10 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...db.models import PurchaseOrder, Transaction
+from datetime import timedelta
+
+from ...core.config import settings
+from ...db.models import FingerStatus, PurchaseOrder, Transaction
 from .cashier_repo import (
     CashierBeneficiaryRepository,
     CashierOrderRepository,
@@ -38,6 +41,10 @@ class PurchaseOrderNotFoundError(Exception):
 
 class TransactionAlreadyExistsError(Exception):
     """Levée lorsque le bon de commande a déjà été payé."""
+
+
+class EnrollmentConflictError(Exception):
+    """Levée lorsqu'une autre ressource est déjà en cours d'enrôlement."""
 
 
 def compute_shares(amount: float | Decimal) -> tuple[int, int]:
@@ -102,6 +109,7 @@ def _to_order_response(row: dict[str, Any], cashier_id: int) -> CashierOrderResp
             total_amount=row["company_share"] + row["customer_share"],
             customer_share=row["customer_share"],
             company_share=row["company_share"],
+            finger_status=row["transaction_finger_status"],
             created_at=row["transaction_date"],
         )
     return CashierOrderResponse(
@@ -151,12 +159,37 @@ async def perform_transaction(
             f"Purchase order {order_id} already has a transaction"
         )
 
+    # Une seule ressource en enrôlement à la fois (bénéficiaire ou transaction).
+    if hasattr(session, "execute"):
+        from sqlalchemy import select
+
+        from ...db.models import Beneficiary
+
+        enrolling_beneficiary = await session.execute(
+            select(Beneficiary.id).where(
+                Beneficiary.finger_status == FingerStatus.ENROLLING
+            )
+        )
+        if enrolling_beneficiary.scalars().first() is not None:
+            raise EnrollmentConflictError("Another resource is already enrolling")
+        enrolling_transaction = await session.execute(
+            select(Transaction.id).where(
+                Transaction.finger_status == FingerStatus.ENROLLING
+            )
+        )
+        if enrolling_transaction.scalars().first() is not None:
+            raise EnrollmentConflictError("Another resource is already enrolling")
+
     company_share, customer_share = compute_shares(order.amount)
+    now = datetime.now(UTC)
     transaction = Transaction(
         purchase_order_id=order.id,
         company_share=company_share,
         customer_share=customer_share,
-        created_at=datetime.now(UTC),
+        finger_status=FingerStatus.ENROLLING,
+        enroll_expires_at=now + timedelta(minutes=settings.ENROLL_EXPIRES_MINUTES),
+        verification_attempts=0,
+        created_at=now,
     )
     saved = await transactions.add(transaction)
     return _to_transaction_response(saved, order)
@@ -174,8 +207,39 @@ def _to_transaction_response(
         total_amount=total,
         customer_share=transaction.customer_share,
         company_share=transaction.company_share,
+        finger_status=transaction.finger_status,
         created_at=transaction.created_at,
     )
+
+
+async def cancel_transaction(
+    session: AsyncSession, cashier_id: int, transaction_id: int
+) -> TransactionResponse:
+    from sqlalchemy import select
+
+    from ...db.models import PurchaseOrder
+
+    transaction = await CashierTransactionRepository(session).get_by_id(transaction_id) if hasattr(CashierTransactionRepository(session), "get_by_id") else None
+    # fallback manual
+    if transaction is None:
+        result = await session.execute(
+            select(Transaction).where(Transaction.id == transaction_id)
+        )
+        transaction = result.scalars().first()
+    if transaction is None:
+        raise PurchaseOrderNotFoundError(f"Transaction {transaction_id} not found")
+    po_result = await session.execute(
+        select(PurchaseOrder).where(PurchaseOrder.id == transaction.purchase_order_id)
+    )
+    order = po_result.scalars().first()
+    if order is None or order.account_id != cashier_id:
+        raise PurchaseOrderNotFoundError(f"Transaction {transaction_id} not found")
+    if transaction.finger_status != FingerStatus.ENROLLING:
+        raise TransactionAlreadyExistsError("Transaction is not enrolling")
+    transaction.finger_status = FingerStatus.CANCELLED
+    transaction.enroll_expires_at = None
+    await session.flush()
+    return _to_transaction_response(transaction, order)
 
 
 async def get_report(

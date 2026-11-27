@@ -12,7 +12,6 @@ from src.db.models import (
     AccountType,
     Beneficiary,
     Cashier,
-    FaceEmbedding,
     PurchaseOrder,
     Report,
     Situation,
@@ -29,11 +28,6 @@ ADMIN_EMAIL = "admin@smartcaisse.com"
 CASHIER_EMAIL = "cashier@smartcaisse.com"
 
 fake = Faker()
-
-
-def make_face_embedding() -> list[float]:
-    """Faker n'a pas de vecteurs : on construit un plongement de 512 dimensions."""
-    return [round(random.random(), 6) for _ in range(512)]
 
 
 async def seed() -> None:
@@ -57,13 +51,6 @@ async def seed() -> None:
             session.add(beneficiary)
             await session.flush()
             beneficiaries.append(beneficiary)
-
-            session.add(
-                FaceEmbedding(
-                    beneficiary_id=beneficiary.id,
-                    embedding=make_face_embedding(),
-                )
-            )
 
         admin_account = Account(
             beneficiary_id=beneficiaries[0].id,

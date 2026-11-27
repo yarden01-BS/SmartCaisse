@@ -85,3 +85,27 @@ async def delete_beneficiary(
         await beneficiary_service.remove_cascade(session, beneficiary_id)
     except beneficiary_service.BeneficiaryNotFoundError as exc:
         raise _not_found(exc) from exc
+
+
+@router.post("/{beneficiary_id}/start-enrollment", response_model=BeneficiaryResponse)
+async def start_enrollment(
+    beneficiary_id: int,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> BeneficiaryResponse:
+    try:
+        return await beneficiary_service.start_enrollment(session, beneficiary_id)
+    except beneficiary_service.BeneficiaryNotFoundError as exc:
+        raise _not_found(exc) from exc
+    except beneficiary_service.EnrollmentConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@router.post("/{beneficiary_id}/cancel-enrollment", response_model=BeneficiaryResponse)
+async def cancel_enrollment(
+    beneficiary_id: int,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> BeneficiaryResponse:
+    try:
+        return await beneficiary_service.cancel_enrollment(session, beneficiary_id)
+    except beneficiary_service.BeneficiaryNotFoundError as exc:
+        raise _not_found(exc) from exc

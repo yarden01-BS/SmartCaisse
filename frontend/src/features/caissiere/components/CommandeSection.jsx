@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { CheckCircle2, Receipt } from 'lucide-react';
-import useFaceVerification from '../hooks/useFaceVerification';
 import { calculerRepartitionSiat } from '../utils';
 import ClientSelect from './ClientSelect';
-import FaceVerification from './FaceVerification';
 import HistoriqueBons from './HistoriqueBons';
 
 export default function CommandeSection({
@@ -20,20 +18,18 @@ export default function CommandeSection({
   const [statusMessage, setStatusMessage] = useState('');
   const [statusErreur, setStatusErreur] = useState(false);
   const [enCours, setEnCours] = useState(false);
-  const face = useFaceVerification();
 
   const { partEntreprise, partClient } = calculerRepartitionSiat(montantInput);
 
   const handleChoisirClient = (pers) => {
     setClient(pers);
     setStatusMessage('');
-    face.reset();
   };
 
   const handleValider = async (e) => {
     e.preventDefault();
     const montant = parseFloat(montantInput);
-    if (!face.visageReconnu || !client || isNaN(montant) || montant <= 0 || enCours) {
+    if (!client || isNaN(montant) || montant <= 0 || enCours) {
       return;
     }
 
@@ -42,7 +38,6 @@ export default function CommandeSection({
     try {
       const bon = await onAjouterCommande({ client, prixTotal: montant });
       setMontantInput('');
-      face.reset();
       setStatusErreur(false);
       setStatusMessage(
         `Bon ${bon.numBon} validé pour ${client.nom} ! Client : ${partClient.toLocaleString()} FCFA | SIAT : ${partEntreprise.toLocaleString()} FCFA`
@@ -102,11 +97,9 @@ export default function CommandeSection({
             </div>
           </div>
 
-          <FaceVerification client={client} face={face} />
-
           <button
             type="submit"
-            disabled={!face.visageReconnu || !montantInput || enCours}
+            disabled={!montantInput || enCours}
             className="mt-auto w-full py-3.5 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-emerald-600 hover:bg-emerald-500 text-white disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed cursor-pointer"
           >
             <CheckCircle2 className="w-5 h-5" />

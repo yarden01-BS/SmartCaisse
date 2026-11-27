@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_MINUTES: int
     # À activer en production (HTTPS uniquement) ; désactivé en local.
     COOKIE_SECURE: bool
+    AGENT_API_KEY: str
+    TEMPLATE_KEY: str
+    ENROLL_EXPIRES_MINUTES: int = 2
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 
 

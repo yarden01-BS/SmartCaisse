@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import create_access_token
-from src.db.models import Beneficiary, PurchaseOrder, Report, Situation, Transaction
+from src.db.models import Beneficiary, FingerStatus, PurchaseOrder, Report, Situation, Transaction
 from src.db.session import get_session
 from src.main import app
 from src.modules.cashier import cashier_service
@@ -66,6 +66,7 @@ def sample_transaction(**changes: Any) -> SimpleNamespace:
         "purchase_order_id": 5,
         "company_share": 1000,
         "customer_share": 1500,
+        "finger_status": FingerStatus.ENROLLING,
         "created_at": ORDER_DATE,
     }
     values.update(changes)
@@ -81,6 +82,7 @@ def sample_beneficiary(**changes: Any) -> SimpleNamespace:
         "profession": "Teacher",
         "situation": Situation.PERMANENT,
         "is_active": True,
+        "finger_status": FingerStatus.VALIDATED,
     }
     values.update(changes)
     return SimpleNamespace(**values)
@@ -101,6 +103,7 @@ def sample_order_row(paid: bool = True) -> dict[str, Any]:
         "transaction_id": 9 if paid else None,
         "company_share": 1000,
         "customer_share": 1500,
+        "transaction_finger_status": FingerStatus.ENROLLING,
         "transaction_date": ORDER_DATE,
     }
 

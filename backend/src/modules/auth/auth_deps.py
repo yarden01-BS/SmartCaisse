@@ -3,9 +3,12 @@
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.security import decode_access_token
-from ...db.models import AccountType
+from ...db.models import Account, AccountType
+from ...db.session import get_session
 
 REFRESH_TOKEN_COOKIE = "refresh_token"
 
@@ -18,6 +21,7 @@ async def get_current_account(
     credentials: HTTPAuthorizationCredentials | None = Depends(  # noqa: B008
         bearer_scheme
     ),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> dict[str, str]:
     """Valide le jeton d'accès bearer et renvoie ses revendications."""
     if credentials is None:
@@ -43,6 +47,18 @@ async def get_current_account(
             detail="Invalid or expired token",
             headers=_UNAUTHORIZED_HEADERS,
         )
+
+    # Vérifie que le compte existe et n'est pas suspendu (si la session le permet).
+    if hasattr(session, "execute"):
+        result = await session.execute(
+            select(Account).where(Account.id == int(account_id))
+        )
+        account = result.scalars().first()
+        if account is None or not account.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is suspended or not found",
+            )
 
     return {"account_id": str(account_id), "role": str(payload.get("role", ""))}
 

@@ -3,8 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from pgvector.sqlalchemy import Vector
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, MetaData, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, LargeBinary, MetaData, func
 from sqlalchemy import Enum as SQEnum
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -39,6 +38,13 @@ class AccountType(Enum):
     CASHIER = "cashier"
 
 
+class FingerStatus(Enum):
+    FINGER_PENDING = "finger_pending"
+    ENROLLING = "enrolling"
+    VALIDATED = "validated"
+    CANCELLED = "cancelled"
+
+
 # Tables
 class Beneficiary(Base):
     __tablename__ = "beneficiaries"
@@ -60,31 +66,16 @@ class Beneficiary(Base):
         passive_deletes=True,
         uselist=False,
     )
-    face_embedding: Mapped[FaceEmbedding | None] = relationship(
-        back_populates="beneficiary",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        uselist=False,
+    finger_status: Mapped[FingerStatus] = mapped_column(
+        SQEnum(FingerStatus, name="finger_status", values_callable=enum_values),
+        default=FingerStatus.FINGER_PENDING,
+    )
+    fingerprint_template: Mapped[bytes | None] = mapped_column(nullable=True)
+    enroll_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
     purchase_orders: Mapped[list[PurchaseOrder]] = relationship(
         back_populates="beneficiary"
-    )
-
-
-class FaceEmbedding(Base):
-    __tablename__ = "face_embeddings"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    beneficiary_id: Mapped[int] = mapped_column(
-        ForeignKey("beneficiaries.id", ondelete="CASCADE"),
-        unique=True,
-    )
-    embedding: Mapped[list[float]] = mapped_column(Vector(512), nullable=False)
-    enrolled_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    beneficiary: Mapped[Beneficiary] = relationship(
-        back_populates="face_embedding", uselist=False
     )
 
 
@@ -181,6 +172,14 @@ class Transaction(Base):
     purchase_order_id: Mapped[int] = mapped_column(ForeignKey("purchase_orders.id"))
     company_share: Mapped[int]
     customer_share: Mapped[int]
+    finger_status: Mapped[FingerStatus] = mapped_column(
+        SQEnum(FingerStatus, name="finger_status", values_callable=enum_values),
+        default=FingerStatus.ENROLLING,
+    )
+    enroll_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    verification_attempts: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

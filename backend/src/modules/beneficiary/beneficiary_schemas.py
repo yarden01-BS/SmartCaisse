@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ...db.models import Situation
+from ...db.models import FingerStatus, Situation
 
 BeneficiarySort = Literal["old", "recent"]
 
@@ -36,4 +36,5 @@ class BeneficiaryResponse(BaseModel):
     profession: str
     situation: Situation
     is_active: bool
+    finger_status: FingerStatus
     created_at: datetime

@@ -118,6 +118,9 @@ async def update(
 
     changes = data.model_dump(exclude_unset=True)
 
+    if account.id == 1 and changes.get("is_active") is False:
+        raise ProtectedAccountError("The base administrator account cannot be suspended")
+
     if "email" in changes and changes["email"]:
         email = changes["email"].strip().lower()
         doublon = await repository.get_by_email(email)
@@ -158,25 +161,7 @@ async def remove(session: AsyncSession, account_id: int) -> None:
         raise ProtectedAccountError("The base administrator account cannot be deleted")
 
     if account.cashier_id is not None:
-        cashier = account.cashier
-        commandes = (
-            await session.execute(
-                select(PurchaseOrder.id).where(PurchaseOrder.account_id == account_id)
-            )
-        ).scalars().all()
-        if commandes:
-            await session.execute(
-                delete(Transaction).where(Transaction.purchase_order_id.in_(commandes))
-            )
-            await session.execute(
-                delete(PurchaseOrder).where(PurchaseOrder.id.in_(commandes))
-            )
-        await session.execute(delete(Report).where(Report.account_id == account_id))
-        await repository.delete(account)
-        if cashier is not None:
-            await session.delete(cashier)
-            await session.flush()
-        return
+        raise ProtectedAccountError("Cashier accounts cannot be deleted; suspend the account instead")
 
     if account.beneficiary_id is not None:
         beneficiary_id = account.beneficiary_id

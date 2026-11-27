@@ -71,6 +71,13 @@ export default function AdminPage() {
   };
 
   const handleModifierCompte = async (values) => {
+    if (
+      values.statut === 'suspendu' &&
+      editCompte?.statut !== 'suspendu' &&
+      !window.confirm('Confirmer la suspension de ce compte ?')
+    ) {
+      return;
+    }
     if (await gestionComptes.modifierCompte(values)) setSousPage('comptes-liste');
   };
 

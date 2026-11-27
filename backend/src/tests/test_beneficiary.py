@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import create_access_token
-from src.db.models import Situation
+from src.db.models import FingerStatus, Situation
 from src.db.session import get_session
 from src.main import app
 from src.modules.beneficiary import beneficiary_service
@@ -32,6 +32,7 @@ def make_beneficiary(**changes: Any) -> SimpleNamespace:
         "profession": "Teacher",
         "situation": Situation.PERMANENT,
         "is_active": True,
+        "finger_status": FingerStatus.FINGER_PENDING,
         "created_at": datetime(2026, 11, 20, tzinfo=UTC),
     }
     values.update(changes)

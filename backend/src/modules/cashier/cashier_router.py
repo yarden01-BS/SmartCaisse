@@ -80,6 +80,10 @@ async def perform_transaction(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+    except cashier_service.EnrollmentConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
 
 
 @router.get("/reports", response_model=CashierReport)

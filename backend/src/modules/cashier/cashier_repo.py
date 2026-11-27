@@ -7,7 +7,7 @@ from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.base_repo import BaseRepository
-from ...db.models import Beneficiary, PurchaseOrder, Transaction
+from ...db.models import Beneficiary, FingerStatus, PurchaseOrder, Transaction
 
 
 class CashierBeneficiaryRepository(BaseRepository[Beneficiary]):
@@ -19,6 +19,7 @@ class CashierBeneficiaryRepository(BaseRepository[Beneficiary]):
             select(Beneficiary).where(
                 Beneficiary.id == beneficiary_id,
                 Beneficiary.is_active.is_(True),
+                Beneficiary.finger_status == FingerStatus.VALIDATED,
             )
         )
         return result.scalars().first()
@@ -26,7 +27,10 @@ class CashierBeneficiaryRepository(BaseRepository[Beneficiary]):
     async def list_active(self) -> list[Beneficiary]:
         result = await self._session.execute(
             select(Beneficiary)
-            .where(Beneficiary.is_active.is_(True))
+            .where(
+                Beneficiary.is_active.is_(True),
+                Beneficiary.finger_status == FingerStatus.VALIDATED,
+            )
             .order_by(Beneficiary.id)
         )
         return list(result.scalars().all())
@@ -67,6 +71,7 @@ class CashierOrderRepository(BaseRepository[PurchaseOrder]):
                 Transaction.id.label("transaction_id"),
                 Transaction.company_share.label("company_share"),
                 Transaction.customer_share.label("customer_share"),
+                Transaction.finger_status.label("transaction_finger_status"),
                 Transaction.created_at.label("transaction_date"),
             )
             .join(Beneficiary, Beneficiary.id == PurchaseOrder.beneficiary_id)

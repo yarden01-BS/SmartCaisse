@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+
 import {
   Edit3,
   Mail,
-  MoreVertical,
   ShieldCheck,
   Trash2,
   UserCheck,
@@ -17,15 +16,6 @@ export default function ComptesListSection({
   onSupprimer,
   chargement = false,
 }) {
-  const [menuOuvertId, setMenuOuvertId] = useState(null);
-
-  useEffect(() => {
-    if (!menuOuvertId) return;
-    const fermer = () => setMenuOuvertId(null);
-    document.addEventListener('mousedown', fermer);
-    return () => document.removeEventListener('mousedown', fermer);
-  }, [menuOuvertId]);
-
   const filtres = [
     { id: 'actif', label: `Actifs (${totaux.actifs})`, couleur: 'bg-emerald-600' },
     { id: 'suspendu', label: `Suspendus (${totaux.suspendus})`, couleur: 'bg-amber-600' },
@@ -95,40 +85,7 @@ export default function ComptesListSection({
                   </div>
                 </div>
 
-                <div className="relative" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() =>
-                      setMenuOuvertId(menuOuvertId === compte.id ? null : compte.id)
-                    }
-                    className="p-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 cursor-pointer"
-                    title="Options (Modifier / Supprimer)"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-
-                  {menuOuvertId === compte.id && (
-                    <div className="absolute right-0 top-12 bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl z-20 py-2 w-44 text-left">
-                      <button
-                        onClick={() => {
-                          setMenuOuvertId(null);
-                          onModifier(compte);
-                        }}
-                        className="w-full px-4 py-2.5 text-left text-xs text-slate-200 hover:bg-slate-900 flex items-center gap-2.5 cursor-pointer"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 text-blue-400" /> Modifier
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMenuOuvertId(null);
-                          onSupprimer(compte);
-                        }}
-                        className="w-full px-4 py-2.5 text-left text-xs text-red-400 hover:bg-slate-900 flex items-center gap-2.5 cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-red-400" /> Supprimer
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <div />
               </div>
 
               <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950 px-3 py-2 rounded-xl border border-slate-800/60">
@@ -155,13 +112,33 @@ export default function ComptesListSection({
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => onSupprimer(compte)}
-                    className="p-2 rounded-xl bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white transition-colors cursor-pointer"
-                    title="Supprimer ce compte"
+                  {compte.id !== 1 && (
+                    <button
+                      onClick={() =>
+                        onModifier({
+                          ...compte,
+                          statut: compte.statut === 'actif' ? 'suspendu' : 'actif',
+                        })
+                      }
+                    className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                      compte.statut === 'actif'
+                        ? 'bg-amber-500/10 hover:bg-amber-600 text-amber-400 hover:text-white'
+                        : 'bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white'
+                    }`}
+                    title={compte.statut === 'actif' ? 'Suspendre ce compte' : 'Réactiver ce compte'}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    {compte.statut === 'actif' ? '⏸' : '▶'}
                   </button>
+                  )}
+                  {compte.role !== 'Caissière' && (
+                    <button
+                      onClick={() => onSupprimer(compte)}
+                      className="p-2 rounded-xl bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white transition-colors cursor-pointer"
+                      title="Supprimer ce compte"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

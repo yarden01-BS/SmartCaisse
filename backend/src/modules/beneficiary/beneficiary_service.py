@@ -3,10 +3,13 @@
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from datetime import UTC, datetime, timedelta
+
+from ...core.config import settings
 from ...db.models import (
     Account,
     Beneficiary,
-    FaceEmbedding,
+    FingerStatus,
     PurchaseOrder,
     Transaction,
 )
@@ -25,6 +28,10 @@ class BeneficiaryNotFoundError(Exception):
 
 class MatriculeAlreadyExistsError(Exception):
     """Levée lorsque le matricule est déjà attribué à un autre bénéficiaire."""
+
+
+class EnrollmentConflictError(Exception):
+    """Levée lorsqu'une autre ressource est déjà en cours d'enrôlement."""
 
 
 def _to_response(beneficiary: Beneficiary) -> BeneficiaryResponse:
@@ -115,10 +122,56 @@ async def remove_cascade(session: AsyncSession, beneficiary_id: int) -> None:
         )
 
     await session.execute(
-        delete(FaceEmbedding).where(FaceEmbedding.beneficiary_id == beneficiary_id)
-    )
-    await session.execute(
         delete(Account).where(Account.beneficiary_id == beneficiary_id)
     )
     await session.delete(beneficiary)
     await session.flush()
+
+
+async def _has_enrolling_resource(
+    session: AsyncSession,
+    exclude_beneficiary_id: int | None = None,
+    exclude_transaction_id: int | None = None,
+) -> bool:
+    stmt = select(Beneficiary.id).where(
+        Beneficiary.finger_status == FingerStatus.ENROLLING
+    )
+    if exclude_beneficiary_id is not None:
+        stmt = stmt.where(Beneficiary.id != exclude_beneficiary_id)
+    result = await session.execute(stmt)
+    if result.scalars().first() is not None:
+        return True
+
+    stmt = select(Transaction.id).where(Transaction.finger_status == FingerStatus.ENROLLING)
+    if exclude_transaction_id is not None:
+        stmt = stmt.where(Transaction.id != exclude_transaction_id)
+    result = await session.execute(stmt)
+    return result.scalars().first() is not None
+
+
+async def start_enrollment(
+    session: AsyncSession, beneficiary_id: int
+) -> BeneficiaryResponse:
+    beneficiary = await BeneficiaryRepository(session).get_by_id(beneficiary_id)
+    if beneficiary is None:
+        raise BeneficiaryNotFoundError(f"Beneficiary {beneficiary_id} not found")
+    if await _has_enrolling_resource(session, exclude_beneficiary_id=beneficiary_id):
+        raise EnrollmentConflictError("Another resource is already enrolling")
+    beneficiary.finger_status = FingerStatus.ENROLLING
+    beneficiary.enroll_expires_at = datetime.now(UTC) + timedelta(
+        minutes=settings.ENROLL_EXPIRES_MINUTES
+    )
+    await session.flush()
+    return _to_response(beneficiary)
+
+
+async def cancel_enrollment(
+    session: AsyncSession, beneficiary_id: int
+) -> BeneficiaryResponse:
+    beneficiary = await BeneficiaryRepository(session).get_by_id(beneficiary_id)
+    if beneficiary is None:
+        raise BeneficiaryNotFoundError(f"Beneficiary {beneficiary_id} not found")
+    beneficiary.finger_status = FingerStatus.FINGER_PENDING
+    beneficiary.enroll_expires_at = None
+    await session.flush()
+    return _to_response(beneficiary)

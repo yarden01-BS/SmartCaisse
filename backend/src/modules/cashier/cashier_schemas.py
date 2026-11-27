@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ...db.models import Situation
+from ...db.models import FingerStatus, Situation
 
 ReportPeriodFilter = Literal["all", "daily", "monthly"]
 
@@ -47,6 +47,7 @@ class TransactionResponse(BaseModel):
     total_amount: int
     customer_share: int
     company_share: int
+    finger_status: FingerStatus
     created_at: datetime
 
 

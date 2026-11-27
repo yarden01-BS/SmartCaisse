@@ -1,0 +1,12 @@
+[project]
+name = "smartcaisse-agent"
+version = "0.1.0"
+description = "Agent local SmartCaisse (lecteur BioMini 2)"
+requires-python = ">=3.15"
+dependencies = [
+    "requests>=2.32.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.uv]
+dev-dependencies = []
